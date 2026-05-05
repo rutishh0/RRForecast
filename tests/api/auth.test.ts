@@ -1,12 +1,12 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMocks } from "node-mocks-http";
-import siteGateCheck from "@/api/auth/site-gate-check";
-import login from "@/api/auth/login";
-import check from "@/api/auth/check";
-import logout from "@/api/auth/logout";
-import register from "@/api/auth/register";
-import changePassword from "@/api/auth/change-password";
+import siteGateCheck from "@/lib/api/auth/site-gate-check";
+import login from "@/lib/api/auth/login";
+import check from "@/lib/api/auth/check";
+import logout from "@/lib/api/auth/logout";
+import register from "@/lib/api/auth/register";
+import changePassword from "@/lib/api/auth/change-password";
 import { prisma } from "@/lib/db/prisma";
 import { signJwt } from "@/lib/auth/jwt";
 import bcrypt from "bcryptjs";

@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMocks } from "node-mocks-http";
-import sendMessage from "@/api/messages/index";
-import inbox from "@/api/messages/inbox";
-import unreadCount from "@/api/messages/unread-count";
-import readMessage from "@/api/messages/[id]/read";
+import sendMessage from "@/lib/api/messages/send";
+import inbox from "@/lib/api/messages/inbox";
+import unreadCount from "@/lib/api/messages/unread-count";
+import readMessage from "@/lib/api/messages/mark-read";
 import { signJwt } from "@/lib/auth/jwt";
 import { prisma } from "@/lib/db/prisma";
 import bcrypt from "bcryptjs";

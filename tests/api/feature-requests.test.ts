@@ -1,8 +1,9 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMocks } from "node-mocks-http";
-import frIndex from "@/api/feature-requests/index";
-import frId from "@/api/feature-requests/[id]";
+import frList from "@/lib/api/feature-requests/list";
+import frCreate from "@/lib/api/feature-requests/create";
+import frId from "@/lib/api/feature-requests/byId";
 import { signJwt } from "@/lib/auth/jwt";
 import { prisma } from "@/lib/db/prisma";
 
@@ -23,11 +24,11 @@ describe("feature-requests routes", () => {
       headers: { authorization: `Bearer ${adminToken}` },
       body: { title: "T", description: "D" },
     });
-    await frIndex(req as any, res as any);
+    await frCreate(req as any, res as any);
     expect(res._getStatusCode()).toBe(201);
 
     ({ req, res } = createMocks({ method: "GET", headers: { authorization: `Bearer ${adminToken}` } }));
-    await frIndex(req as any, res as any);
+    await frList(req as any, res as any);
     expect(JSON.parse(res._getData()).requests.length).toBe(1);
   });
 

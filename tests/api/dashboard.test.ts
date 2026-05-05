@@ -1,10 +1,11 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMocks } from "node-mocks-http";
-import dashboardIndex from "@/api/dashboard/index";
-import dashboardId from "@/api/dashboard/[id]";
-import summary from "@/api/dashboard/summary";
-import upcoming from "@/api/dashboard/upcoming";
+import dashboardList from "@/lib/api/dashboard/list";
+import dashboardCreate from "@/lib/api/dashboard/create";
+import dashboardId from "@/lib/api/dashboard/byId";
+import summary from "@/lib/api/dashboard/summary";
+import upcoming from "@/lib/api/dashboard/upcoming";
 import { signJwt } from "@/lib/auth/jwt";
 import { prisma } from "@/lib/db/prisma";
 import bcrypt from "bcryptjs";
@@ -27,11 +28,11 @@ describe("dashboard routes", () => {
       headers: { authorization: `Bearer ${token}` },
       body: { itemType: "todo", title: "Test todo", priority: "high" },
     });
-    await dashboardIndex(req as any, res as any);
+    await dashboardCreate(req as any, res as any);
     expect(res._getStatusCode()).toBe(201);
 
     ({ req, res } = createMocks({ method: "GET", headers: { authorization: `Bearer ${token}` } }));
-    await dashboardIndex(req as any, res as any);
+    await dashboardList(req as any, res as any);
     const data = JSON.parse(res._getData());
     expect(data.items.length).toBe(1);
     expect(data.items[0].title).toBe("Test todo");

@@ -1,10 +1,11 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMocks } from "node-mocks-http";
-import postitsIndex from "@/api/postits/index";
-import postitsId from "@/api/postits/[id]";
-import postitRead from "@/api/postits/[id]/read";
-import unreadCount from "@/api/postits/unread-count";
+import postitsList from "@/lib/api/postits/list";
+import postitsCreate from "@/lib/api/postits/create";
+import postitsId from "@/lib/api/postits/byId";
+import postitRead from "@/lib/api/postits/mark-read";
+import unreadCount from "@/lib/api/postits/unread-count";
 import { signJwt } from "@/lib/auth/jwt";
 import { prisma } from "@/lib/db/prisma";
 
@@ -26,12 +27,12 @@ describe("postits routes", () => {
       headers: { authorization: `Bearer ${token}` },
       body: { contextType: "general", content: "hello world" },
     });
-    await postitsIndex(req as any, res as any);
+    await postitsCreate(req as any, res as any);
     expect(res._getStatusCode()).toBe(201);
     const created = JSON.parse(res._getData()).postit;
 
     ({ req, res } = createMocks({ method: "GET", headers: { authorization: `Bearer ${token}` } }));
-    await postitsIndex(req as any, res as any);
+    await postitsList(req as any, res as any);
     expect(JSON.parse(res._getData()).postits.length).toBe(1);
 
     ({ req, res } = createMocks({

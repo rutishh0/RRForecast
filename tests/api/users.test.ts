@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMocks } from "node-mocks-http";
-import usersIndex from "@/api/users/index";
-import usersMe from "@/api/users/me";
-import usersId from "@/api/users/[id]";
+import usersIndex from "@/lib/api/users/list";
+import usersMe from "@/lib/api/users/me";
+import usersId from "@/lib/api/users/byId";
 import { signJwt } from "@/lib/auth/jwt";
 import { prisma } from "@/lib/db/prisma";
 

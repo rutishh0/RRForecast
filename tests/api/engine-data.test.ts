@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMocks } from "node-mocks-http";
-import getSnapshot from "@/api/engine-data/index";
+import getSnapshot from "@/lib/api/engine-data/get";
 import { signJwt } from "@/lib/auth/jwt";
 import { prisma } from "@/lib/db/prisma";
 
@@ -48,7 +48,7 @@ describe("GET /api/engine-data", () => {
   });
 });
 
-import upload from "@/api/engine-data/upload";
+import upload from "@/lib/api/engine-data/upload";
 import * as XLSX from "xlsx";
 
 function buildXlsxBase64(rows: any[][], sheetName = "Engine Tracker"): string {
