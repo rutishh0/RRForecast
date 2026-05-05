@@ -38,3 +38,5 @@ coverage
 
 # Prisma
 /src/generated/prisma
+
+.vercel
