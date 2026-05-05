@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/engine-data/upload.ts": { "maxDuration": 30 },
+    "api/auth/login.ts": { "maxDuration": 10 },
+    "api/auth/check.ts": { "maxDuration": 10 }
+  }
+}

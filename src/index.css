@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/* Project tokens — kept identical to V4 so existing components port without re-theming */
+:root {
+  --rr-bg-primary: #0a1218;
+  --rr-bg-secondary: #0f1923;
+  --rr-card: #131e29;
+  --rr-navy-50: #1a2533;
+  --rr-border: #2a3744;
+  --rr-text: #e8edf2;
+  --rr-text-dim: #98a4b0;
+  --rr-text-muted: #6b7884;
+  --rr-text-bright: #ffffff;
+  --rr-gold: #c5a44e;
+  --rr-gold-bright: #e0c170;
+  --rr-success: #3fb068;
+  --rr-warning: #d99e3a;
+  --rr-danger: #e35454;
+  --rr-danger-bg: #2a1518;
+  --rr-danger-border: #4a2226;
+}
+
+/* Expose the same tokens to Tailwind v4 (generates text-rr-gold, bg-rr-card, etc.). */
+/* The :root --rr-* block above is kept separately so V4-ported component CSS that uses */
+/* `var(--rr-bg-secondary)` directly still resolves. Both sets MUST stay in sync. */
+@theme {
+  --color-rr-bg-primary: #0a1218;
+  --color-rr-bg-secondary: #0f1923;
+  --color-rr-card: #131e29;
+  --color-rr-navy-50: #1a2533;
+  --color-rr-border: #2a3744;
+  --color-rr-text: #e8edf2;
+  --color-rr-text-dim: #98a4b0;
+  --color-rr-text-muted: #6b7884;
+  --color-rr-text-bright: #ffffff;
+  --color-rr-gold: #c5a44e;
+  --color-rr-gold-bright: #e0c170;
+  --color-rr-success: #3fb068;
+  --color-rr-warning: #d99e3a;
+  --color-rr-danger: #e35454;
+  --color-rr-danger-bg: #2a1518;
+  --color-rr-danger-border: #4a2226;
+}
+
+body {
+  background: var(--rr-bg-secondary);
+  color: var(--rr-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
