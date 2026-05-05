@@ -18,8 +18,8 @@ import { TopLessors } from "@/src/components/beta/dashboard/TopLessors";
 import { StageFunnel } from "@/src/components/beta/dashboard/StageFunnel";
 import { ActionQueue } from "@/src/components/beta/dashboard/ActionQueue";
 import { RemovalHeatmap } from "@/src/components/beta/dashboard/RemovalHeatmap";
-import { PipelineTrend } from "@/src/components/beta/dashboard/PipelineTrendPlaceholder";
-import { OperatorMap } from "@/src/components/beta/dashboard/OperatorMapPlaceholder";
+import { PipelineTrend } from "@/src/components/beta/dashboard/PipelineTrend";
+import { OperatorMap } from "@/src/components/beta/dashboard/OperatorMap";
 
 export default function BetaDashboardPage() {
   const { shopVisits, forecasts } = useAppData();

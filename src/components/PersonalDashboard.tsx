@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Calendar, CheckSquare, Zap, Mail, Plus, Trash2, Clock, AlertTriangle, Check, ChevronRight } from 'lucide-react';
-import type { User, DashboardItem, DashboardSummary, DashboardPriority, ActiveView } from '../types';
+import type { User, DashboardItem, DashboardSummary, DashboardPriority } from '../types';
 import { dashboardAPI, messagesAPI } from '../services/api';
 
 interface PersonalDashboardProps {
     currentUser: User;
-    onViewChange: (view: ActiveView) => void;
 }
 
 type ItemType = 'deadline' | 'todo' | 'action_item' | 'meeting';
@@ -31,7 +30,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }>
     completed: { label: "Completed", bg: "#DCFCE7", text: "#166534" },
 };
 
-export default function PersonalDashboard({ currentUser, onViewChange: _onViewChange }: PersonalDashboardProps) {
+export default function PersonalDashboard({ currentUser }: PersonalDashboardProps) {
     const [summary, setSummary] = useState<DashboardSummary | null>(null);
     const [items, setItems] = useState<Record<ItemType, DashboardItem[]>>({
         deadline: [], todo: [], action_item: [], meeting: [],

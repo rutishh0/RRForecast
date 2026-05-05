@@ -1,7 +1,9 @@
 import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { type ReactNode } from "react";
 import { useAppData } from "@/src/context/AppDataContext";
+import { useLayoutMode } from "@/src/context/LayoutModeContext";
 import LoginScreen from "@/src/components/auth/LoginScreen";
+import BetaLoginScreen from "@/src/components/beta/auth/BetaLoginScreen";
 
 export function safeFromPath(from: string | null): string {
   // Only allow internal paths (starts with `/`, not `//` to prevent open-redirect)
@@ -27,18 +29,17 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
 
 export function LoginRoute() {
   const { currentUser, login } = useAppData();
+  const { mode } = useLayoutMode();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const from = safeFromPath(searchParams.get("from"));
 
   if (currentUser) return <Navigate to={from} replace />;
 
-  return (
-    <LoginScreen
-      onLogin={async (user) => {
-        await login(user);
-        navigate(from, { replace: true });
-      }}
-    />
-  );
+  const handleLogin = async (user: Parameters<typeof login>[0]) => {
+    await login(user);
+    navigate(from, { replace: true });
+  };
+
+  return mode === "beta" ? <BetaLoginScreen onLogin={handleLogin} /> : <LoginScreen onLogin={handleLogin} />;
 }

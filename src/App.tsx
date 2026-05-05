@@ -18,6 +18,8 @@ import {
 } from "@/src/components/routing/route-adapters";
 import ForeSightPage from "@/src/pages/ForeSightPage";
 import SettingsPage from "@/src/pages/admin/SettingsPage";
+import BetaPipelinePage from "@/src/pages/beta/PipelinePage";
+import BetaFinancialsPage from "@/src/pages/beta/FinancialsPage";
 
 export default function App() {
   return (
@@ -37,6 +39,8 @@ export default function App() {
                 <Route path="/collaborative"          element={<CollaborativeRoute />} />
                 <Route path="/profile"                element={<ProfileRoute />} />
                 <Route path="/foresight"              element={<ForeSightPage />} />
+                <Route path="/pipeline"               element={<BetaPipelinePage />} />
+                <Route path="/financials"             element={<BetaFinancialsPage />} />
                 <Route path="/admin/feature-requests" element={<RequireAdmin><FeatureRequestAdminRoute /></RequireAdmin>} />
                 <Route path="/admin/users"            element={<RequireAdmin><UserManagementRoute /></RequireAdmin>} />
                 <Route path="/admin/settings"         element={<RequireAdmin><SettingsPage /></RequireAdmin>} />

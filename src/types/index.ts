@@ -29,21 +29,6 @@ export interface AuthState {
   loading: boolean;
 }
 
-// ============================================================
-// Active view (kept from V4 — Spec A2 will replace with URL routing)
-// ============================================================
-
-export type ActiveView =
-  | "my-dashboard"
-  | "shop-visits"
-  | "forecast"
-  | "data-editor"
-  | "engine-map"
-  | "collaborative"
-  | "profile"
-  | "feature-requests-admin"
-  | "user-management";
-
 export type UploadMode = "combined" | "shop-only" | "forecast-only";
 
 // ============================================================

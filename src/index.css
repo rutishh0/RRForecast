@@ -193,6 +193,37 @@ html[data-layout="beta"] .tabular {
   font-feature-settings: "tnum";
 }
 
+/* ============================================================
+   Beta theme override for legacy `--rr-*` tokens
+   ------------------------------------------------------------
+   Routes that don't yet have dedicated beta page variants render
+   classic V5 components inside the beta shell. To keep them
+   visually consistent with the warm-paper palette, remap the
+   classic dark tokens to beta-equivalents when [data-layout="beta"]
+   is active. Tailwind utilities (`bg-rr-card`, `text-rr-gold`, etc.)
+   automatically pick up the new values via CSS variables.
+   This catches everything except hardcoded inline hex styles —
+   acceptable trade-off for fast cross-route consistency.
+   ============================================================ */
+html[data-layout="beta"] {
+  --rr-bg-primary: #f7f6f2;
+  --rr-bg-secondary: #f7f6f2;
+  --rr-card: #ffffff;
+  --rr-navy-50: #f1efe9;
+  --rr-border: #e6e2d8;
+  --rr-text: #0f172a;
+  --rr-text-dim: #475569;
+  --rr-text-muted: #6b6f78;
+  --rr-text-bright: #0f172a;
+  --rr-gold: #0e3a5f;
+  --rr-gold-bright: #1f6fb2;
+  --rr-success: #15803d;
+  --rr-warning: #d97706;
+  --rr-danger: #dc2626;
+  --rr-danger-bg: #fee2e2;
+  --rr-danger-border: #fecaca;
+}
+
 /* Beta-only utilities (label-tiny, hero gradients, tints) */
 @utility label-tiny {
   font-size: 10px;

@@ -19,6 +19,8 @@ import {
   Star,
   Settings,
   Search,
+  Workflow,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { useAppData } from "@/src/context/AppDataContext";
@@ -33,8 +35,9 @@ const SECTIONS: { label: string; items: NavItem[]; admin?: boolean }[] = [
   {
     label: "Operate",
     items: [
-      { label: "My Dashboard", to: "/my-dashboard", icon: LayoutDashboard },
+      { label: "Dashboard", to: "/my-dashboard", icon: LayoutDashboard },
       { label: "Shop Visits", to: "/shop-visits", icon: Wrench },
+      { label: "Pipeline", to: "/pipeline", icon: Workflow },
       { label: "Engine Map", to: "/engine-map", icon: MapPin },
     ],
   },
@@ -42,6 +45,7 @@ const SECTIONS: { label: string; items: NavItem[]; admin?: boolean }[] = [
     label: "Plan",
     items: [
       { label: "Forecast", to: "/forecast", icon: LineChart },
+      { label: "Financials", to: "/financials", icon: Wallet },
       { label: "Data Editor", to: "/data-editor", icon: PenSquare },
     ],
   },

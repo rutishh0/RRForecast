@@ -44,7 +44,7 @@ export function PersonalDashboardRoute() {
   // In beta layout, /my-dashboard renders the v0-style portfolio dashboard
   // (KPIs + charts + heatmap). Classic mode keeps the V4-ported dashboard.
   if (mode === "beta") return <BetaDashboardPage />;
-  return <PersonalDashboard currentUser={currentUser!} onViewChange={() => {}} />;
+  return <PersonalDashboard currentUser={currentUser!} />;
 }
 
 export function ShopVisitsRoute() {
