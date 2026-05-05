@@ -1,7 +1,8 @@
-import { Wrench, BarChart3, Upload, PenSquare, MapPin, Grid, Users, User as UserIcon, Star, LogOut, Settings } from 'lucide-react';
+import { Wrench, BarChart3, Upload, PenSquare, MapPin, Grid, Users, User as UserIcon, Star, LogOut, Settings, Sparkles } from 'lucide-react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAppData } from '@/src/context/AppDataContext';
+import { useLayoutMode } from '@/src/context/LayoutModeContext';
 import FileUpload from '@/src/components/FileUpload';
 import { ForeSightWidget } from '@/src/components/foresight/ForeSightWidget';
 
@@ -426,6 +427,7 @@ export default function Layout() {
               }}>{header.title}</h1>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              <BetaToggleButton />
               <span style={{
                 fontSize: 11,
                 fontWeight: 500,
@@ -460,5 +462,36 @@ export default function Layout() {
         onUploaded={handleUploaded}
       />
     </>
+  );
+}
+
+function BetaToggleButton() {
+  const { toggleMode } = useLayoutMode();
+  return (
+    <button
+      onClick={toggleMode}
+      title="Try the beta layout"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        height: 28,
+        padding: "0 10px",
+        borderRadius: 6,
+        border: "1px solid rgba(197,164,78,0.5)",
+        background: "rgba(197,164,78,0.08)",
+        color: "#8E7633",
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: "0.5px",
+        cursor: "pointer",
+        transition: "background 120ms",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(197,164,78,0.18)")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(197,164,78,0.08)")}
+    >
+      <Sparkles size={12} />
+      Try Beta
+    </button>
   );
 }
