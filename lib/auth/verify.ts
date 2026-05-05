@@ -1,6 +1,6 @@
 // V5/lib/auth/verify.ts
-import { verifyJwt } from "./jwt";
-import type { Role } from "./jwt";
+import { verifyJwt } from "./jwt.js";
+import type { Role } from "./jwt.js";
 
 export class AuthError extends Error {
   statusCode: number;

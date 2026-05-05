@@ -1,11 +1,11 @@
 // V5/api/postits/[[...action]].ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import handleList from "../../lib/api/postits/list";
-import handleCreate from "../../lib/api/postits/create";
-import handleAll from "../../lib/api/postits/all";
-import handleById from "../../lib/api/postits/byId";
-import handleMarkRead from "../../lib/api/postits/mark-read";
-import handleUnreadCount from "../../lib/api/postits/unread-count";
+import handleList from "../../lib/api/postits/list.js";
+import handleCreate from "../../lib/api/postits/create.js";
+import handleAll from "../../lib/api/postits/all.js";
+import handleById from "../../lib/api/postits/byId.js";
+import handleMarkRead from "../../lib/api/postits/mark-read.js";
+import handleUnreadCount from "../../lib/api/postits/unread-count.js";
 
 function getSegments(req: VercelRequest): string[] {
   const a = req.query.action;

@@ -1,7 +1,7 @@
 // V5/api/engine-data/[[...action]].ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import handleGet from "../../lib/api/engine-data/get";
-import handleUpload from "../../lib/api/engine-data/upload";
+import handleGet from "../../lib/api/engine-data/get.js";
+import handleUpload from "../../lib/api/engine-data/upload.js";
 
 function getSegments(req: VercelRequest): string[] {
   const a = req.query.action;

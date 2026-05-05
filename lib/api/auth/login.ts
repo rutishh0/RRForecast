@@ -1,9 +1,9 @@
 // V5/lib/api/auth/login.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/db/prisma";
-import { verifySiteCode } from "@/lib/auth/site-gate";
-import { signJwt } from "@/lib/auth/jwt";
+import { prisma } from "../../db/prisma.js";
+import { verifySiteCode } from "../../auth/site-gate.js";
+import { signJwt } from "../../auth/jwt.js";
 
 const GENERIC_401 = { error: "Invalid credentials" };
 

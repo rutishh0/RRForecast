@@ -1,11 +1,11 @@
 // V5/api/auth/[...action].ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import handleSiteGateCheck from "../../lib/api/auth/site-gate-check";
-import handleLogin from "../../lib/api/auth/login";
-import handleLogout from "../../lib/api/auth/logout";
-import handleCheck from "../../lib/api/auth/check";
-import handleRegister from "../../lib/api/auth/register";
-import handleChangePassword from "../../lib/api/auth/change-password";
+import handleSiteGateCheck from "../../lib/api/auth/site-gate-check.js";
+import handleLogin from "../../lib/api/auth/login.js";
+import handleLogout from "../../lib/api/auth/logout.js";
+import handleCheck from "../../lib/api/auth/check.js";
+import handleRegister from "../../lib/api/auth/register.js";
+import handleChangePassword from "../../lib/api/auth/change-password.js";
 
 function getSegments(req: VercelRequest): string[] {
   const a = req.query.action;

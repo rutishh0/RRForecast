@@ -1,8 +1,8 @@
 // V5/api/users/[[...action]].ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import handleList from "../../lib/api/users/list";
-import handleMe from "../../lib/api/users/me";
-import handleById from "../../lib/api/users/byId";
+import handleList from "../../lib/api/users/list.js";
+import handleMe from "../../lib/api/users/me.js";
+import handleById from "../../lib/api/users/byId.js";
 
 function getSegments(req: VercelRequest): string[] {
   const a = req.query.action;

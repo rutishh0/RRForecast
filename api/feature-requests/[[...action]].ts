@@ -1,9 +1,9 @@
 // V5/api/feature-requests/[[...action]].ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import handleList from "../../lib/api/feature-requests/list";
-import handleCreate from "../../lib/api/feature-requests/create";
-import handleById from "../../lib/api/feature-requests/byId";
-import handlePendingCount from "../../lib/api/feature-requests/pending-count";
+import handleList from "../../lib/api/feature-requests/list.js";
+import handleCreate from "../../lib/api/feature-requests/create.js";
+import handleById from "../../lib/api/feature-requests/byId.js";
+import handlePendingCount from "../../lib/api/feature-requests/pending-count.js";
 
 function getSegments(req: VercelRequest): string[] {
   const a = req.query.action;

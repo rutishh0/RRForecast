@@ -1,7 +1,7 @@
 // V5/lib/api/auth/check.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { verifyAuth } from "@/lib/auth/verify";
-import { prisma } from "@/lib/db/prisma";
+import { verifyAuth } from "../../auth/verify.js";
+import { prisma } from "../../db/prisma.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") {

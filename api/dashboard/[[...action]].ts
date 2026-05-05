@@ -1,10 +1,10 @@
 // V5/api/dashboard/[[...action]].ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import handleList from "../../lib/api/dashboard/list";
-import handleCreate from "../../lib/api/dashboard/create";
-import handleById from "../../lib/api/dashboard/byId";
-import handleSummary from "../../lib/api/dashboard/summary";
-import handleUpcoming from "../../lib/api/dashboard/upcoming";
+import handleList from "../../lib/api/dashboard/list.js";
+import handleCreate from "../../lib/api/dashboard/create.js";
+import handleById from "../../lib/api/dashboard/byId.js";
+import handleSummary from "../../lib/api/dashboard/summary.js";
+import handleUpcoming from "../../lib/api/dashboard/upcoming.js";
 
 function getSegments(req: VercelRequest): string[] {
   const a = req.query.action;

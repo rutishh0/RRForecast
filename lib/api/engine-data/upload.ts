@@ -1,8 +1,8 @@
 // V5/lib/api/engine-data/upload.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { withAuth } from "@/lib/auth/with-auth";
-import { prisma } from "@/lib/db/prisma";
-import { parseWorkbook, type ShopVisitRecord, type ForecastRecord } from "@/lib/excel/parse";
+import { withAuth } from "../../auth/with-auth.js";
+import { prisma } from "../../db/prisma.js";
+import { parseWorkbook, type ShopVisitRecord, type ForecastRecord } from "../../excel/parse.js";
 
 export default withAuth(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== "POST") return res.status(405).json({ error: "method not allowed" });

@@ -1,6 +1,6 @@
 // V5/lib/api/auth/logout.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { withAuth } from "@/lib/auth/with-auth";
+import { withAuth } from "../../auth/with-auth.js";
 
 // Best-effort: client clears localStorage. Server is no-op for stateless JWT.
 export default withAuth(async (req: VercelRequest, res: VercelResponse) => {

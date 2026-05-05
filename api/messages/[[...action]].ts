@@ -1,11 +1,11 @@
 // V5/api/messages/[[...action]].ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import handleSend from "../../lib/api/messages/send";
-import handleInbox from "../../lib/api/messages/inbox";
-import handleSent from "../../lib/api/messages/sent";
-import handleUnreadCount from "../../lib/api/messages/unread-count";
-import handleDelete from "../../lib/api/messages/delete";
-import handleMarkRead from "../../lib/api/messages/mark-read";
+import handleSend from "../../lib/api/messages/send.js";
+import handleInbox from "../../lib/api/messages/inbox.js";
+import handleSent from "../../lib/api/messages/sent.js";
+import handleUnreadCount from "../../lib/api/messages/unread-count.js";
+import handleDelete from "../../lib/api/messages/delete.js";
+import handleMarkRead from "../../lib/api/messages/mark-read.js";
 
 function getSegments(req: VercelRequest): string[] {
   const a = req.query.action;

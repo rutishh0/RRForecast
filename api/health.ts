@@ -1,6 +1,6 @@
 // V5/api/health.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { prisma } from "@/lib/db/prisma";
+import { prisma } from "../lib/db/prisma.js";
 
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
   let dbStatus = "unknown";

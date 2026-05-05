@@ -1,7 +1,7 @@
 // V5/lib/auth/with-auth.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { verifyAuth } from "./verify";
-import type { Role } from "./jwt";
+import { verifyAuth } from "./verify.js";
+import type { Role } from "./jwt.js";
 
 export interface AuthContext {
   userId: number;

@@ -1,7 +1,7 @@
 // V5/lib/api/engine-data/get.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { withAuth } from "@/lib/auth/with-auth";
-import { prisma } from "@/lib/db/prisma";
+import { withAuth } from "../../auth/with-auth.js";
+import { prisma } from "../../db/prisma.js";
 
 export default withAuth(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== "GET") return res.status(405).json({ error: "method not allowed" });

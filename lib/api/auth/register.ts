@@ -1,8 +1,8 @@
 // V5/lib/api/auth/register.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import bcrypt from "bcryptjs";
-import { withAuth } from "@/lib/auth/with-auth";
-import { prisma } from "@/lib/db/prisma";
+import { withAuth } from "../../auth/with-auth.js";
+import { prisma } from "../../db/prisma.js";
 
 export default withAuth(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== "POST") return res.status(405).json({ error: "method not allowed" });
