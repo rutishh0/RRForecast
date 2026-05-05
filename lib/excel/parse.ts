@@ -125,6 +125,7 @@ const SHOP_VISIT_COL_MAP: Record<string, keyof ShopVisitRecord> = {
   'msn': 'msn',
   'engine type': 'engineType',
   'on-wing/off-wing': 'wingStatus',
+  'on-wing / off-wing': 'wingStatus',
   'removal date': 'removalDate',
   'transition probability': 'transitionProbability',
   'sv probability': 'svProbability',
@@ -248,6 +249,7 @@ const FORECAST_COL_MAP: Record<string, keyof ForecastRecord> = {
   'esn': 'esn',
   'engine type': 'engineType',
   'on-wing/off-wing': 'wingStatus',
+  'on-wing / off-wing': 'wingStatus',
   'removal date': 'removalDate',
   'comment': 'comment',
   'type of sv needed': 'svTypeNeeded',
@@ -269,20 +271,37 @@ const FORECAST_COL_MAP: Record<string, keyof ForecastRecord> = {
   'assessed priority': 'priority',
 };
 
-/** Safely coerce a cell value to string */
+/**
+ * Convert an Excel serial date (days since 1900-01-00, with the 1900 leap-year
+ * bug Excel preserved for compat with Lotus 123) to an ISO yyyy-mm-dd string.
+ * 25569 = days between Excel's 1900-01-00 epoch and Unix's 1970-01-01.
+ */
+function excelSerialToISO(serial: number): string {
+  if (!Number.isFinite(serial)) return String(serial);
+  const ms = Math.round((serial - 25569) * 86400 * 1000);
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return String(serial);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Safely coerce a cell value to string. Numeric Excel dates → ISO yyyy-mm-dd. */
 function cellStr(val: unknown): string {
   if (val === null || val === undefined) return '';
   if (typeof val === 'number') {
-    // Excel dates are serial numbers; try to detect
-    if (val > 40000 && val < 60000) {
-      try {
-        const dateStr = XLSX.SSF.format('dd/mm/yy', val);
-        return dateStr;
-      } catch {
-        return String(val);
-      }
+    // Excel date serial range covers ~1909-09-12 (3500) through ~2173-10-14 (100000).
+    // Most operational dates are 30000-80000 (1982-2118). Dates use ISO format so
+    // `new Date(value)` parses correctly downstream (charts, heatmaps, sorting).
+    if (val > 30000 && val < 80000 && Number.isFinite(val) && val % 1 === 0) {
+      return excelSerialToISO(val);
     }
     return String(val);
+  }
+  // Some xlsx Date objects sneak in when cellDates is true elsewhere — handle generically.
+  if (val instanceof Date && !Number.isNaN(val.getTime())) {
+    return val.toISOString().slice(0, 10);
   }
   return String(val).trim();
 }
@@ -294,6 +313,41 @@ function cellNum(val: unknown): number | null {
   const str = String(val).replace(/[%,$]/g, '').trim();
   const n = parseFloat(str);
   return isNaN(n) ? null : n;
+}
+
+/**
+ * Coerce a probability/percentage cell to a 0-100 number.
+ * Excel's percent format stores 100% as 1.0; the source workbook uses
+ * fractions throughout, so anything ≤1.5 is treated as a fraction and scaled.
+ * Values >1.5 are assumed already in 0-100 form (e.g., "85" or "85%").
+ */
+function cellPct(val: unknown): number | null {
+  const n = cellNum(val);
+  if (n == null) return null;
+  return n <= 1.5 ? Math.round(n * 1000) / 10 : n;
+}
+
+/**
+ * Quick ESN sanity check — pivot tables and section dividers embedded in
+ * Future Forecast / Reference sheets put non-ESN strings in column F.
+ * Real ESNs are 4-7 alphanumeric chars (typically 5 numeric).
+ */
+function looksLikeEsn(esn: string): boolean {
+  if (!esn) return false;
+  const trimmed = esn.trim();
+  if (!/^[A-Z0-9][A-Z0-9\-/]{2,15}$/i.test(trimmed) || /\s/.test(trimmed)) return false;
+  // Reject 4-digit year-like values (pivot section dividers in Future Forecast).
+  if (/^\d{4}$/.test(trimmed)) {
+    const n = parseInt(trimmed, 10);
+    if (n >= 1900 && n <= 2100) return false;
+  }
+  return true;
+}
+
+/** Engine type column should hold a Trent family. Reject pivot-table junk values. */
+function looksLikeTrentFamily(et: string): boolean {
+  if (!et) return true; // Empty acceptable — row may be pre-data-entry
+  return /^Trent[\s/-]/i.test(et.trim());
 }
 
 /** Find the header row index — looks for a row containing key header markers */
@@ -317,7 +371,22 @@ function findHeaderRow(sheet: XLSX.WorkSheet): number {
   return 0; // fallback
 }
 
-/** Build column mapping from header row */
+/**
+ * Build column mapping from header row.
+ *
+ * Two-pass logic:
+ *   Pass 1: exact case-insensitive match against colMap.
+ *   Pass 2: substring fallback for headers that didn't exact-match — but
+ *           ONLY for record keys (target fields) that no column already
+ *           claimed in pass 1.
+ *
+ * The two-pass split avoids a real bug where, e.g., "Lessor" exact-matches
+ * col A → key=lessor, but then "TCA / LessorCare+" substring-matches col B
+ * → key=lessor too (because "tca / lessorcare+" contains "lessor"). Without
+ * the guard, both columns get mapped to the same target key, and the row
+ * loop overwrites the real value with whatever's in the partial-match
+ * column (usually empty).
+ */
 function buildColMapping<T>(
   sheet: XLSX.WorkSheet,
   headerRow: number,
@@ -325,25 +394,42 @@ function buildColMapping<T>(
 ): Map<number, keyof T> {
   const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
   const mapping = new Map<number, keyof T>();
+  const claimedKeys = new Set<keyof T>();
 
+  function readHeader(c: number): string | null {
+    const cell = sheet[XLSX.utils.encode_cell({ r: headerRow, c })];
+    if (!cell) return null;
+    return String(cell.v ?? '')
+      .toLowerCase()
+      .trim()
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/\s+/g, ' ');
+  }
+
+  // Pass 1 — exact matches.
   for (let c = range.s.c; c <= range.e.c; c++) {
-    const addr = XLSX.utils.encode_cell({ r: headerRow, c });
-    const cell = sheet[addr];
-    if (!cell) continue;
+    const header = readHeader(c);
+    if (!header) continue;
+    const key = colMap[header];
+    if (key && !claimedKeys.has(key)) {
+      mapping.set(c, key);
+      claimedKeys.add(key);
+    }
+  }
 
-    let header = String(cell.v || '').toLowerCase().trim();
-    // Strip line breaks
-    header = header.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ');
-
-    if (colMap[header]) {
-      mapping.set(c, colMap[header]);
-    } else {
-      // Try partial matching
-      for (const [pattern, key] of Object.entries(colMap)) {
-        if (header.includes(pattern) || pattern.includes(header)) {
-          if (!mapping.has(c)) mapping.set(c, key as keyof T);
-          break;
-        }
+  // Pass 2 — substring fallback. Skip columns already mapped and target keys
+  // already claimed by an exact match.
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    if (mapping.has(c)) continue;
+    const header = readHeader(c);
+    if (!header) continue;
+    for (const [pattern, key] of Object.entries(colMap)) {
+      const k = key as keyof T;
+      if (claimedKeys.has(k)) continue;
+      if (header.includes(pattern) || pattern.includes(header)) {
+        mapping.set(c, k);
+        claimedKeys.add(k);
+        break;
       }
     }
   }
@@ -357,6 +443,9 @@ function parseFullForecast(sheet: XLSX.WorkSheet): ShopVisitRecord[] {
   const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
   const records: ShopVisitRecord[] = [];
 
+  let dataStarted = false;
+  let consecutiveEmpty = 0;
+
   for (let r = headerRow + 1; r <= range.e.r; r++) {
     const row: Partial<ShopVisitRecord> = { _rowIndex: r };
 
@@ -365,16 +454,37 @@ function parseFullForecast(sheet: XLSX.WorkSheet): ShopVisitRecord[] {
       const cell = sheet[addr];
       const val = cell ? cell.v : null;
 
-      if (key === 'transitionProbability' || key === 'svProbability' || key === 'totalSvContribution' || key === 'cashOutProbability') {
+      if (key === 'transitionProbability' || key === 'svProbability' || key === 'cashOutProbability') {
+        (row as any)[key] = cellPct(val);
+      } else if (key === 'totalSvContribution') {
         (row as any)[key] = cellNum(val);
       } else {
         (row as any)[key] = cellStr(val);
       }
     }
 
-    // Skip rows that are clearly empty (no lessor AND no operator AND no esn)
-    if (!row.lessor && !row.operator && !row.esn) continue;
+    // Empty-row + end-of-data detection. A pivot/summary section after the
+    // main data block typically has 1-2 blank rows before it; bail when we
+    // see two empties in a row after data has started.
+    const isEmpty = !row.lessor && !row.operator && !row.esn;
+    if (isEmpty) {
+      if (dataStarted) {
+        consecutiveEmpty++;
+        if (consecutiveEmpty >= 2) break;
+      }
+      continue;
+    }
+    consecutiveEmpty = 0;
 
+    // Skip rows whose ESN column doesn't hold an ESN-shaped value — these are
+    // section dividers (year labels, pivot titles, lessor totals) embedded in
+    // Future Forecast and similar sheets.
+    if (!looksLikeEsn((row.esn || '').toString())) continue;
+    // Filter pivot-table rows where engineType column holds a non-Trent value
+    // (lessor names, wing-state values, year labels, summary titles).
+    if (!looksLikeTrentFamily((row.engineType || '').toString())) continue;
+
+    dataStarted = true;
     records.push(fillDefaults(row));
   }
 
@@ -388,6 +498,9 @@ function parseForecast(sheet: XLSX.WorkSheet): ForecastRecord[] {
   const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
   const records: ForecastRecord[] = [];
 
+  let dataStarted = false;
+  let consecutiveEmpty = 0;
+
   for (let r = headerRow + 1; r <= range.e.r; r++) {
     const row: Partial<ForecastRecord> = { _rowIndex: r };
 
@@ -398,8 +511,20 @@ function parseForecast(sheet: XLSX.WorkSheet): ForecastRecord[] {
       (row as any)[key] = cellStr(val);
     }
 
-    if (!row.lessor && !row.operator && !row.esn) continue;
+    const isEmpty = !row.lessor && !row.operator && !row.esn;
+    if (isEmpty) {
+      if (dataStarted) {
+        consecutiveEmpty++;
+        if (consecutiveEmpty >= 2) break;
+      }
+      continue;
+    }
+    consecutiveEmpty = 0;
 
+    if (!looksLikeEsn((row.esn || '').toString())) continue;
+    if (!looksLikeTrentFamily((row.engineType || '').toString())) continue;
+
+    dataStarted = true;
     records.push(fillForecastDefaults(row));
   }
 
@@ -504,48 +629,59 @@ function fillForecastDefaults(partial: Partial<ForecastRecord>): ForecastRecord 
 export function parseWorkbook(buffer: Uint8Array | ArrayBuffer): ParsedWorkbook {
   const wb = XLSX.read(buffer, { type: "array", cellDates: false });
   const sheetNames = wb.SheetNames;
+  const lower = (n: string) => n.toLowerCase();
 
-  // Detect new template: "Engine Tracker" sheet
-  const engineTrackerName = sheetNames.find((n) =>
-    n.toLowerCase().includes("engine") && n.toLowerCase().includes("tracker"),
+  // Three named sheets in the V8.5 template (and predecessors):
+  //   - "Engine SV Tracker"  → active shop visits in the pipeline
+  //   - "Future Forecast"    → predicted future removals (forecast-only)
+  //   - "Completed"          → historical completed SVs (status forced to "Complete")
+  // Additional/older formats fall through to the legacy two-sheet logic at the bottom.
+  const trackerName = sheetNames.find(
+    (n) => lower(n).includes("engine") && lower(n).includes("tracker"),
   );
+  const futureName = sheetNames.find(
+    (n) => lower(n).includes("future") && lower(n).includes("forecast"),
+  );
+  const completedName = sheetNames.find((n) => lower(n) === "completed");
+  const nearTermName = sheetNames.find((n) => lower(n).includes("near term"));
 
-  if (engineTrackerName) {
-    // New template: Engine Tracker is a hybrid sheet containing both
-    // shop-visit and forecast fields. Parse it with both mappings.
-    const sheet = wb.Sheets[engineTrackerName];
-    const shopVisits = parseFullForecast(sheet);
-    const forecasts = parseForecast(sheet);
+  if (trackerName || futureName || completedName) {
+    const shopVisits: ShopVisitRecord[] = [];
+    const forecasts: ForecastRecord[] = [];
 
-    // Also parse companion sheets if workbook was split
-    // "Near Term Forecasting" contains Slot Planned / Awaiting Detail records
-    // "Future Forecast" contains the bulk on-wing fleet with no active SV
-    // "Completed" contains finished shop visits
-    const companionSheets = sheetNames.filter((n) => {
-      const nl = n.toLowerCase();
-      return (
-        nl.includes("near term") ||
-        (nl.includes("future") && nl.includes("forecast")) ||
-        nl === "completed"
-      );
-    });
-    for (const companionName of companionSheets) {
-      const companionSheet = wb.Sheets[companionName];
-      shopVisits.push(...parseFullForecast(companionSheet));
-      forecasts.push(...parseForecast(companionSheet));
+    if (trackerName) {
+      shopVisits.push(...parseFullForecast(wb.Sheets[trackerName]));
     }
+    if (nearTermName) {
+      shopVisits.push(...parseFullForecast(wb.Sheets[nearTermName]));
+    }
+    if (completedName) {
+      const completed = parseFullForecast(wb.Sheets[completedName]).map((r) => ({
+        ...r,
+        // Force status to "Complete" — these rows are historical regardless of
+        // whatever induction-status column happened to say in the source sheet.
+        status: r.status && r.status.toLowerCase().includes("complete") ? r.status : "Complete",
+      }));
+      shopVisits.push(...completed);
+    }
+    if (futureName) {
+      forecasts.push(...parseForecast(wb.Sheets[futureName]));
+    }
+
     return { shopVisits, forecasts };
   }
 
-  // Original format: Full Forecast + 2026 Forecast
+  // Legacy two-sheet format (Full Forecast + 2026 Forecast) — used by V4 fixtures
+  // and the lv_fake.xlsx test file. Single hybrid sheet with both mappings applied.
   const fullForecastName =
-    sheetNames.find((n) => n.toLowerCase().includes("full") && n.toLowerCase().includes("forecast")) ??
+    sheetNames.find((n) => lower(n).includes("full") && lower(n).includes("forecast")) ??
     sheetNames[0];
 
   const forecastName =
-    sheetNames.find((n) =>
-      n.toLowerCase().includes("2026") ||
-      (n.toLowerCase().includes("forecast") && !n.toLowerCase().includes("full")),
+    sheetNames.find(
+      (n) =>
+        lower(n).includes("2026") ||
+        (lower(n).includes("forecast") && !lower(n).includes("full")),
     ) ??
     sheetNames[1] ??
     sheetNames[0];

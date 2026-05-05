@@ -42,8 +42,14 @@ export interface DerivedFinancials {
   cashOutWeighted: number;
 }
 
+// Default base price for engine families not in FAMILY_BASE_PRICE (e.g., minor
+// typos in source data, future families not yet catalogued). Roughly the
+// midpoint of the known Trent range so aggregate sums stay sensible.
+const DEFAULT_BASE_PRICE = 13_000_000;
+
 export function deriveFinancials(e: EngineRecord): DerivedFinancials {
-  const baseRevenue = e.svPrice ?? FAMILY_BASE_PRICE[e.engineType] * stageConfidence(e.stage);
+  const familyPrice = FAMILY_BASE_PRICE[e.engineType] ?? DEFAULT_BASE_PRICE;
+  const baseRevenue = e.svPrice ?? familyPrice * stageConfidence(e.stage);
   const marginPct = BASE_MARGIN_PCT[e.engineType] ?? 18;
   const contribution = e.svContribution ?? Math.round(baseRevenue * (marginPct / 100));
   const profit = contribution * 0.55;
