@@ -7,10 +7,12 @@ import handleSummary from "../../lib/api/dashboard/summary.js";
 import handleUpcoming from "../../lib/api/dashboard/upcoming.js";
 
 function getSegments(req: VercelRequest): string[] {
-  const a = req.query.action;
-  if (Array.isArray(a)) return a;
-  if (typeof a === "string") return [a];
-  return [];
+  // Parse URL directly — Vercel's @vercel/node v5 does not reliably populate
+  // req.query for catch-all routes. /api/<resource>/<...rest> → <...rest>.
+  const url = req.url ?? "";
+  const pathOnly = url.split("?")[0];
+  const parts = pathOnly.split("/").filter((s) => s.length > 0);
+  return parts.slice(2);
 }
 
 const NOT_FOUND = (res: VercelResponse) => res.status(404).json({ error: "Not found" });
