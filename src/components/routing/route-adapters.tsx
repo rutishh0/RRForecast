@@ -1,4 +1,5 @@
 import { useAppData } from "@/src/context/AppDataContext";
+import { useLayoutMode } from "@/src/context/LayoutModeContext";
 import PersonalDashboard from "@/src/components/PersonalDashboard";
 import ShopVisitTracker from "@/src/components/ShopVisitTracker";
 import EngineForecast from "@/src/components/EngineForecast";
@@ -8,6 +9,9 @@ import CollaborativeDashboard from "@/src/components/CollaborativeDashboard";
 import UserProfile from "@/src/components/UserProfile";
 import FeatureRequestAdmin from "@/src/components/FeatureRequestAdmin";
 import UserManagement from "@/src/components/UserManagement";
+import BetaDashboardPage from "@/src/pages/beta/DashboardPage";
+import BetaEnginesPage from "@/src/pages/beta/EnginesPage";
+import BetaForecastPage from "@/src/pages/beta/ForecastPage";
 import { Upload, ArrowRight, FileSpreadsheet } from "lucide-react";
 
 function WelcomeScreen() {
@@ -36,20 +40,25 @@ function WelcomeScreen() {
 
 export function PersonalDashboardRoute() {
   const { currentUser } = useAppData();
-  // The original PersonalDashboard accepts an onViewChange prop for clicking links to
-  // other views. After A2 it's no longer needed — children use react-router <Link>s.
-  // Pass a no-op for the migration; the PersonalDashboard internals get updated in Task 10.
+  const { mode } = useLayoutMode();
+  // In beta layout, /my-dashboard renders the v0-style portfolio dashboard
+  // (KPIs + charts + heatmap). Classic mode keeps the V4-ported dashboard.
+  if (mode === "beta") return <BetaDashboardPage />;
   return <PersonalDashboard currentUser={currentUser!} onViewChange={() => {}} />;
 }
 
 export function ShopVisitsRoute() {
   const { shopVisits } = useAppData();
+  const { mode } = useLayoutMode();
+  if (mode === "beta") return <BetaEnginesPage />;
   if (shopVisits.length === 0) return <WelcomeScreen />;
   return <ShopVisitTracker data={shopVisits} />;
 }
 
 export function ForecastRoute() {
   const { forecasts } = useAppData();
+  const { mode } = useLayoutMode();
+  if (mode === "beta") return <BetaForecastPage />;
   if (forecasts.length === 0) return <WelcomeScreen />;
   return <EngineForecast data={forecasts} />;
 }
