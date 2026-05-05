@@ -23,8 +23,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const segments = getSegments(req);
   const method = req.method ?? "GET";
 
-  // /api/postits
-  if (segments.length === 0) {
+  // /api/postits (rewritten to /_root by vercel.json)
+  if (segments.length === 0 || (segments.length === 1 && segments[0] === "_root")) {
     if (method === "GET") return handleList(req, res);
     if (method === "POST") return handleCreate(req, res);
     return METHOD_NOT_ALLOWED(res);
