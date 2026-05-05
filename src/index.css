@@ -47,3 +47,31 @@ body {
   color: var(--rr-text);
   font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
+
+/* ForeSight markdown — custom bullets/numbering for Gemini-generated lists */
+.foresight-li-bullet::before {
+  content: "";
+  position: absolute;
+  left: 0.4rem;
+  top: 0.65rem;
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 9999px;
+  background: var(--rr-gold, #c5a44e);
+}
+
+.counter-reset-foresight {
+  counter-reset: foresight-li;
+}
+.foresight-li-ordered {
+  counter-increment: foresight-li;
+}
+.foresight-li-ordered::before {
+  content: counter(foresight-li) ".";
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  color: var(--rr-gold, #c5a44e);
+  font-weight: 600;
+  font-size: 0.85rem;
+}

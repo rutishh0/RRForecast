@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { ForecastRecord } from '../types';
+import type { ForecastRecord, SortConfig } from '../types';
 import KPICard from './KPICard';
 import DataTable from './DataTable';
 import RemovalTimeline from './Charts/RemovalTimeline';
@@ -11,6 +11,7 @@ import {
   computeLessorBreakdown,
   computeEngineTypeBreakdown,
 } from '../utils/dataTransforms';
+import { useForecastParams } from '../lib/routing/use-typed-params';
 
 interface EngineForecastProps {
   data: ForecastRecord[];
@@ -38,6 +39,30 @@ export default function EngineForecast({ data }: EngineForecastProps) {
   const monthlyRemovals = useMemo(() => computeMonthlyRemovals(data), [data]);
   const lessorBreakdown = useMemo(() => computeLessorBreakdown(data), [data]);
   const engineBreakdown = useMemo(() => computeEngineTypeBreakdown(data), [data]);
+
+  const [params, updateParams] = useForecastParams();
+  const activeFilters = useMemo<Record<string, string>>(() => {
+    const f: Record<string, string> = {};
+    for (const k of ['lessor', 'operator', 'engineType', 'wingStatus', 'priority'] as const) {
+      const v = params[k];
+      if (v) f[k] = v;
+    }
+    return f;
+  }, [params]);
+  const sort: SortConfig | null = params.sort
+    ? { key: params.sort, direction: params.dir ?? 'asc' }
+    : null;
+  const handleSearchChange = (term: string) => updateParams({ search: term });
+  const handleFiltersChange = (filters: Record<string, string>) =>
+    updateParams({
+      lessor: filters.lessor,
+      operator: filters.operator,
+      engineType: filters.engineType,
+      wingStatus: filters.wingStatus,
+      priority: filters.priority,
+    });
+  const handleSortChange = (s: SortConfig | null) =>
+    updateParams({ sort: s?.key ?? undefined, dir: s?.direction });
 
   return (
     <div className="animate-fade-in">
@@ -101,6 +126,12 @@ export default function EngineForecast({ data }: EngineForecastProps) {
             { key: 'wingStatus', label: 'Wing Status' },
             { key: 'priority', label: 'Priority' },
           ]}
+          searchTerm={params.search ?? ''}
+          activeFilters={activeFilters}
+          sort={sort}
+          onSearchChange={handleSearchChange}
+          onFiltersChange={handleFiltersChange}
+          onSortChange={handleSortChange}
         />
       </div>
     </div>

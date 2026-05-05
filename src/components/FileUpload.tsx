@@ -91,9 +91,6 @@ export default function FileUpload({ isOpen, onClose, isLoading: externalLoading
             >
               <FileSpreadsheet size={36} className="text-rr-gold mx-auto mb-3" />
               <p className="text-sm text-rr-text">Click to select an .xlsx workbook</p>
-              <p className="text-xs text-rr-text-muted mt-2">
-                File is parsed in the browser, then uploaded to the server (base64 in JSON — Netskope-safe).
-              </p>
               <input
                 ref={inputRef}
                 type="file"

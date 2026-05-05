@@ -22,6 +22,14 @@ interface DataTableProps<T extends Record<string, any>> {
   columnGroups?: Record<string, ColumnGroup>;
   searchKeys?: (keyof T & string)[];
   filterKeys?: { key: keyof T & string; label: string }[];
+
+  // Controlled-component props (Spec A2)
+  searchTerm: string;
+  activeFilters: Record<string, string>;
+  sort: SortConfig | null;
+  onSearchChange: (term: string) => void;
+  onFiltersChange: (filters: Record<string, string>) => void;
+  onSortChange: (sort: SortConfig | null) => void;
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -30,10 +38,14 @@ export default function DataTable<T extends Record<string, any>>({
   columnGroups,
   searchKeys = [],
   filterKeys = [],
+  searchTerm,
+  activeFilters,
+  sort,
+  onSearchChange,
+  onFiltersChange,
+  onSortChange,
 }: DataTableProps<T>) {
-  const [sort, setSort] = useState<SortConfig | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
+  // showFilters stays internal (UI-only)
   const [showFilters, setShowFilters] = useState(false);
 
   // Filter unique values for filter dropdowns
@@ -74,17 +86,16 @@ export default function DataTable<T extends Record<string, any>>({
   }, [data, searchTerm, searchKeys, activeFilters, sort]);
 
   const handleSort = (key: string) => {
-    setSort(prev => {
-      if (prev?.key === key) {
-        return prev.direction === 'asc' ? { key, direction: 'desc' } : null;
-      }
-      return { key, direction: 'asc' };
-    });
+    if (sort?.key === key) {
+      onSortChange(sort.direction === 'asc' ? { key, direction: 'desc' } : null);
+    } else {
+      onSortChange({ key, direction: 'asc' });
+    }
   };
 
   const clearFilters = () => {
-    setActiveFilters({});
-    setSearchTerm('');
+    onFiltersChange({});
+    onSearchChange('');
   };
 
   const hasActiveFilters = searchTerm || Object.values(activeFilters).some(Boolean);
@@ -120,7 +131,7 @@ export default function DataTable<T extends Record<string, any>>({
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search records..."
             className="w-full pl-9 pr-3 py-1.5 bg-rr-bg-secondary border border-rr-border rounded-md text-sm
               text-rr-text placeholder:text-rr-text-muted focus:outline-none focus:border-rr-gold/40"
@@ -164,8 +175,8 @@ export default function DataTable<T extends Record<string, any>>({
             <div key={fk.key} className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider text-rr-text-muted">{fk.label}</label>
               <select
-                value={activeFilters[fk.key] || ''}
-                onChange={(e) => setActiveFilters(prev => ({ ...prev, [fk.key]: e.target.value }))}
+                value={activeFilters[fk.key] ?? ''}
+                onChange={(e) => onFiltersChange({ ...activeFilters, [fk.key]: e.target.value })}
                 className="px-2 py-1 bg-rr-bg-secondary border border-rr-border rounded text-xs text-rr-text
                   focus:outline-none focus:border-rr-gold/40 min-w-[120px]"
               >

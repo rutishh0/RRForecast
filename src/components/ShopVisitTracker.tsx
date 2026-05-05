@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
-import type { ShopVisitRecord } from '../types';
+import type { ShopVisitRecord, SortConfig } from '../types';
 import KPICard from './KPICard';
 import StatusPipeline from './StatusPipeline';
 import DataTable from './DataTable';
 import EngineDetailPanel from './EngineDetailPanel';
 import { computeShopVisitKPIs, computePipelineStages } from '../utils/dataTransforms';
+import { useShopVisitsParams } from '../lib/routing/use-typed-params';
 
 interface ShopVisitTrackerProps {
   data: ShopVisitRecord[];
@@ -137,6 +138,33 @@ export default function ShopVisitTracker({ data }: ShopVisitTrackerProps) {
   const stages = useMemo(() => computePipelineStages(data), [data]);
   const [selectedEngine, setSelectedEngine] = useState<ShopVisitRecord | null>(null);
 
+  const [params, updateParams] = useShopVisitsParams();
+  const activeFilters = useMemo<Record<string, string>>(() => {
+    const f: Record<string, string> = {};
+    for (const k of ['lessor', 'operator', 'engineType', 'aircraftType', 'status', 'shop', 'wingStatus', 'priority'] as const) {
+      const v = params[k];
+      if (v) f[k] = v;
+    }
+    return f;
+  }, [params]);
+  const sort: SortConfig | null = params.sort
+    ? { key: params.sort, direction: params.dir ?? 'asc' }
+    : null;
+  const handleSearchChange = (term: string) => updateParams({ search: term });
+  const handleFiltersChange = (filters: Record<string, string>) =>
+    updateParams({
+      lessor: filters.lessor,
+      operator: filters.operator,
+      engineType: filters.engineType,
+      aircraftType: filters.aircraftType,
+      status: filters.status,
+      shop: filters.shop,
+      wingStatus: filters.wingStatus,
+      priority: filters.priority,
+    });
+  const handleSortChange = (s: SortConfig | null) =>
+    updateParams({ sort: s?.key ?? undefined, dir: s?.direction });
+
   return (
     <div className="animate-fade-in">
       {/* View Header */}
@@ -193,6 +221,12 @@ export default function ShopVisitTracker({ data }: ShopVisitTrackerProps) {
             { key: 'wingStatus', label: 'Wing Status' },
             { key: 'priority', label: 'Priority' },
           ]}
+          searchTerm={params.search ?? ''}
+          activeFilters={activeFilters}
+          sort={sort}
+          onSearchChange={handleSearchChange}
+          onFiltersChange={handleFiltersChange}
+          onSortChange={handleSortChange}
         />
       </div>
 
