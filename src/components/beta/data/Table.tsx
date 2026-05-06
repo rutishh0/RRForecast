@@ -1,6 +1,8 @@
 // V5/src/components/beta/data/Table.tsx — table primitives
 import { cn } from "@/src/lib/utils";
+import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 import type { ReactNode } from "react";
+import type { SortDir } from "@/src/lib/beta/use-sort";
 
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -47,6 +49,54 @@ export function TH({
       )}
     >
       {children}
+    </th>
+  );
+}
+
+// Click-to-sort header. Pair with the `useSort` hook from
+// @/src/lib/beta/use-sort. `dir` is "asc" | "desc" when this column is the
+// active sort, otherwise null — driving the chevron state.
+export function SortableTH<K extends string>({
+  children,
+  sortKey,
+  dir,
+  onToggle,
+  align = "left",
+  className,
+}: {
+  children: ReactNode;
+  sortKey: K;
+  dir: SortDir | null;
+  onToggle: (key: K) => void;
+  align?: "left" | "right" | "center";
+  className?: string;
+}) {
+  const Icon = dir === "asc" ? ChevronUp : dir === "desc" ? ChevronDown : ChevronsUpDown;
+  return (
+    <th
+      className={cn(
+        "label-tiny font-medium px-3 h-8 border-b border-border whitespace-nowrap",
+        align === "right" && "text-right",
+        align === "center" && "text-center",
+        className,
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => onToggle(sortKey)}
+        className={cn(
+          "inline-flex items-center gap-1 select-none cursor-pointer",
+          "hover:text-foreground transition-colors",
+          align === "right" && "ml-auto",
+          align === "center" && "mx-auto",
+          dir != null && "text-foreground",
+        )}
+        aria-sort={dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none"}
+      >
+        {align === "right" && <Icon className="size-3 opacity-60" />}
+        <span>{children}</span>
+        {align !== "right" && <Icon className="size-3 opacity-60" />}
+      </button>
     </th>
   );
 }

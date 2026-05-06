@@ -1,16 +1,17 @@
 // V5/src/components/beta/engines/EnginesTable.tsx
 //
-// Filterable engines table — replaces ShopVisitTracker in beta mode.
-// Free-text search + family + stage filters; renders status pill, removal
-// date, SV likelihood, list value.
+// Filterable + sortable engines table — replaces ShopVisitTracker in beta
+// mode. Free-text search + family + stage filters; click any column header
+// to sort. Status pill, removal date, SV likelihood, list value.
 
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
 import type { EngineRecord, PipelineStage } from "@/src/lib/beta/types";
 import { formatDate, formatUSD, formatPct } from "@/src/lib/beta/format";
-import { Table, THead, TR, TH, TD } from "@/src/components/beta/data/Table";
+import { Table, THead, TR, TD, SortableTH } from "@/src/components/beta/data/Table";
 import { StatusPill, type StatusTone } from "@/src/components/beta/data/Status";
+import { useSort } from "@/src/lib/beta/use-sort";
 
 const STAGE_TONE: Record<PipelineStage, StatusTone> = {
   Forecasted: "neutral",
@@ -23,6 +24,17 @@ const STAGE_TONE: Record<PipelineStage, StatusTone> = {
   Cancelled: "critical",
   "On Hold": "critical",
 };
+
+type SortKey =
+  | "esn"
+  | "engineType"
+  | "operator"
+  | "lessor"
+  | "stage"
+  | "svType"
+  | "removal"
+  | "svProbability"
+  | "svPrice";
 
 export function EnginesTable({ engines }: { engines: EngineRecord[] }) {
   const [q, setQ] = useState("");
@@ -50,6 +62,22 @@ export function EnginesTable({ engines }: { engines: EngineRecord[] }) {
       return true;
     });
   }, [engines, q, family, stage]);
+
+  const { sorted, toggleSort, dirFor } = useSort<EngineRecord, SortKey>(
+    filtered,
+    {
+      esn: (e) => e.esn,
+      engineType: (e) => e.engineType,
+      operator: (e) => e.operator,
+      lessor: (e) => e.lessor,
+      stage: (e) => e.stage,
+      svType: (e) => e.svType,
+      removal: (e) => e.removalDate ?? e.transitionDate ?? e.leaseExpiry,
+      svProbability: (e) => e.svProbability,
+      svPrice: (e) => e.svPrice,
+    },
+    { key: "removal", dir: "asc" },
+  );
 
   return (
     <div className="bg-surface border border-border rounded-md overflow-hidden">
@@ -84,25 +112,25 @@ export function EnginesTable({ engines }: { engines: EngineRecord[] }) {
           ))}
         </select>
         <span className="ml-auto text-[11.5px] text-muted-foreground tabular-nums">
-          {filtered.length} of {engines.length}
+          {sorted.length} of {engines.length}
         </span>
       </div>
       <Table>
         <THead>
           <TR hover={false}>
-            <TH>ESN</TH>
-            <TH>Engine</TH>
-            <TH>Operator</TH>
-            <TH>Lessor</TH>
-            <TH>Stage</TH>
-            <TH>SV type</TH>
-            <TH align="right">Removal</TH>
-            <TH align="right">SV likelihood</TH>
-            <TH align="right">List value</TH>
+            <SortableTH sortKey="esn" dir={dirFor("esn")} onToggle={toggleSort}>ESN</SortableTH>
+            <SortableTH sortKey="engineType" dir={dirFor("engineType")} onToggle={toggleSort}>Engine</SortableTH>
+            <SortableTH sortKey="operator" dir={dirFor("operator")} onToggle={toggleSort}>Operator</SortableTH>
+            <SortableTH sortKey="lessor" dir={dirFor("lessor")} onToggle={toggleSort}>Lessor</SortableTH>
+            <SortableTH sortKey="stage" dir={dirFor("stage")} onToggle={toggleSort}>Stage</SortableTH>
+            <SortableTH sortKey="svType" dir={dirFor("svType")} onToggle={toggleSort}>SV type</SortableTH>
+            <SortableTH sortKey="removal" dir={dirFor("removal")} onToggle={toggleSort} align="right">Removal</SortableTH>
+            <SortableTH sortKey="svProbability" dir={dirFor("svProbability")} onToggle={toggleSort} align="right">SV likelihood</SortableTH>
+            <SortableTH sortKey="svPrice" dir={dirFor("svPrice")} onToggle={toggleSort} align="right">List value</SortableTH>
           </TR>
         </THead>
         <tbody>
-          {filtered.map((e) => (
+          {sorted.map((e) => (
             <TR key={e.esn}>
               <TD mono>
                 <Link to={`/engine-map?esn=${encodeURIComponent(e.esn)}`} className="hover:underline font-medium text-brand">

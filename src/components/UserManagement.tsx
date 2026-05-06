@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Users, Plus, Trash2, Shield, ShieldCheck, User as UserIcon, Loader2, AlertTriangle, Check, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Users, Plus, Trash2, Shield, ShieldCheck, User as UserIcon, Loader2, AlertTriangle, Check, X, Search, ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import type { User, Role } from '../types';
 import { usersAPI, authAPI } from '../services/api';
+import { useSort } from '../lib/beta/use-sort';
 
 interface UserManagementProps {
     currentUser: User;
@@ -13,6 +14,8 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Shield; color: s
     user: { label: 'User', icon: UserIcon, color: 'text-rr-text-dim', badge: 'bg-rr-steel text-rr-text-dim border-rr-border' },
 };
 
+type SortKey = 'displayName' | 'username' | 'role' | 'jobTitle';
+
 export default function UserManagement({ currentUser }: UserManagementProps) {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -20,6 +23,8 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [search, setSearch] = useState('');
+    const [roleFilter, setRoleFilter] = useState<'all' | Role>('all');
 
     // Add form
     const [form, setForm] = useState<{
@@ -98,6 +103,46 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
 
     const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
+    const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return users.filter((u) => {
+            if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+            if (q) {
+                const hay = `${u.displayName} ${u.username} ${u.email ?? ''} ${u.jobTitle ?? ''}`.toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+            return true;
+        });
+    }, [users, search, roleFilter]);
+
+    const { sorted, toggleSort, dirFor } = useSort<User, SortKey>(
+        filtered,
+        {
+            displayName: (u) => u.displayName,
+            username: (u) => u.username,
+            role: (u) => u.role,
+            jobTitle: (u) => u.jobTitle ?? '',
+        },
+        { key: 'displayName', dir: 'asc' },
+    );
+
+    function SortHeader({ k, label, align = 'left' as 'left' | 'right' }: { k: SortKey; label: string; align?: 'left' | 'right' }) {
+        const dir = dirFor(k);
+        const Icon = dir === 'asc' ? ChevronUp : dir === 'desc' ? ChevronDown : ChevronsUpDown;
+        return (
+            <th className={`px-5 py-3 text-[10px] font-semibold text-rr-text-muted uppercase tracking-wider ${align === 'right' ? 'text-right' : 'text-left'}`}>
+                <button
+                    type="button"
+                    onClick={() => toggleSort(k)}
+                    className={`inline-flex items-center gap-1 hover:text-rr-text transition-colors ${dir ? 'text-rr-text' : ''}`}
+                >
+                    <span>{label}</span>
+                    <Icon size={11} className="opacity-60" />
+                </button>
+            </th>
+        );
+    }
+
     if (currentUser.role !== 'admin') {
         return (
             <div className="flex items-center justify-center h-64">
@@ -130,7 +175,11 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
                         lineHeight: 1.2,
                         marginBottom: 4,
                     }}>User Management</h3>
-                    <p style={{ fontSize: 12, color: "#8B9AB5", fontWeight: 500 }}>{users.length} active user{users.length !== 1 ? 's' : ''}</p>
+                    <p style={{ fontSize: 12, color: "#8B9AB5", fontWeight: 500 }}>
+                        {filtered.length === users.length
+                            ? `${users.length} active user${users.length !== 1 ? 's' : ''}`
+                            : `${filtered.length} of ${users.length} users`}
+                    </p>
                 </div>
                 <button
                     onClick={() => { setShowAddForm(true); setError(''); }}
@@ -249,20 +298,44 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
                 </div>
             )}
 
+            {/* Search + filter */}
+            <div style={{ background: "#FFFFFF", border: "1px solid #E8E5DF", borderRadius: 14, padding: '12px 16px', marginBottom: '12px' }} className="flex items-center gap-2">
+                <div className="relative flex-1 max-w-[360px]">
+                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-rr-text-muted" />
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Search name, username, email, job title..."
+                        className="w-full h-8 pl-8 pr-3 rounded-md text-xs bg-rr-bg-secondary border border-rr-border text-rr-text placeholder-rr-text-muted focus:outline-none focus:border-rr-gold/50"
+                    />
+                </div>
+                <select
+                    value={roleFilter}
+                    onChange={e => setRoleFilter(e.target.value as 'all' | Role)}
+                    className="h-8 px-2 rounded-md text-xs bg-rr-bg-secondary border border-rr-border text-rr-text focus:outline-none focus:border-rr-gold/50"
+                >
+                    <option value="all">All roles</option>
+                    <option value="admin">Admin</option>
+                    <option value="manager">Manager</option>
+                    <option value="user">User</option>
+                </select>
+            </div>
+
             {/* Users Table */}
             <div style={{ background: "#FFFFFF", border: "1px solid #E8E5DF", borderRadius: 14, overflow: "hidden", marginBottom: '24px' }}>
                 <table className="w-full">
                     <thead>
                         <tr className="border-b border-rr-border">
-                            <th className="text-left px-5 py-3 text-[10px] font-semibold text-rr-text-muted uppercase tracking-wider">User</th>
-                            <th className="text-left px-5 py-3 text-[10px] font-semibold text-rr-text-muted uppercase tracking-wider">Username</th>
-                            <th className="text-left px-5 py-3 text-[10px] font-semibold text-rr-text-muted uppercase tracking-wider">Role</th>
-                            <th className="text-left px-5 py-3 text-[10px] font-semibold text-rr-text-muted uppercase tracking-wider">Job Title</th>
+                            <SortHeader k="displayName" label="User" />
+                            <SortHeader k="username" label="Username" />
+                            <SortHeader k="role" label="Role" />
+                            <SortHeader k="jobTitle" label="Job Title" />
                             <th className="text-right px-5 py-3 text-[10px] font-semibold text-rr-text-muted uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {users.map(user => {
+                        {sorted.map(user => {
                             const roleConfig = ROLE_CONFIG[user.role] || ROLE_CONFIG.user;
                             const RoleIcon = roleConfig.icon;
                             const isCurrentUser = user.id === currentUser.id;
@@ -330,10 +403,12 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
                     </tbody>
                 </table>
 
-                {users.length === 0 && (
+                {sorted.length === 0 && (
                     <div className="py-12 text-center">
                         <Users size={24} className="text-rr-text-muted mx-auto mb-2" />
-                        <p className="text-xs text-rr-text-dim">No users found</p>
+                        <p className="text-xs text-rr-text-dim">
+                            {users.length === 0 ? 'No users found' : 'No users match the current search/filter'}
+                        </p>
                     </div>
                 )}
             </div>

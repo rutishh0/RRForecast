@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Star, ChevronDown, ChevronUp, Loader2, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Star, ChevronDown, ChevronUp, Loader2, AlertTriangle, Search } from 'lucide-react';
 import type { User, FeatureRequest } from '../types';
 import { featureRequestsAPI } from '../services/api';
 
@@ -29,6 +29,8 @@ export default function FeatureRequestAdmin({ currentUser }: FeatureRequestAdmin
     const [expandedId, setExpandedId] = useState<number | null>(null);
     const [filterStatus, setFilterStatus] = useState<string>('all');
     const [adminNotes, setAdminNotes] = useState<Record<number, string>>({});
+    const [search, setSearch] = useState('');
+    const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title-asc' | 'title-desc' | 'status'>('newest');
 
     const fetchRequests = useCallback(async () => {
         try {
@@ -75,9 +77,36 @@ export default function FeatureRequestAdmin({ currentUser }: FeatureRequestAdmin
         } catch { /* handle error */ }
     };
 
-    const filteredRequests = filterStatus === 'all'
-        ? requests
-        : requests.filter(r => r.status === filterStatus);
+    const filteredRequests = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        const base = filterStatus === 'all' ? requests : requests.filter(r => r.status === filterStatus);
+        const searched = !q
+            ? base
+            : base.filter(r => {
+                const requesterName = r.requester?.displayName ?? '';
+                const hay = `${r.title} ${r.description} ${requesterName}`.toLowerCase();
+                return hay.includes(q);
+            });
+        const arr = [...searched];
+        switch (sortBy) {
+            case 'newest':
+                arr.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                break;
+            case 'oldest':
+                arr.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                break;
+            case 'title-asc':
+                arr.sort((a, b) => a.title.localeCompare(b.title));
+                break;
+            case 'title-desc':
+                arr.sort((a, b) => b.title.localeCompare(a.title));
+                break;
+            case 'status':
+                arr.sort((a, b) => a.status.localeCompare(b.status));
+                break;
+        }
+        return arr;
+    }, [requests, filterStatus, search, sortBy]);
 
     const statusCounts = requests.reduce((acc, r) => {
         acc[r.status] = (acc[r.status] || 0) + 1;
@@ -128,6 +157,34 @@ export default function FeatureRequestAdmin({ currentUser }: FeatureRequestAdmin
                     ← Show all requests
                 </button>
             )}
+
+            {/* Search + sort */}
+            <div className="flex items-center gap-2 mb-3 mt-3">
+                <div className="relative flex-1 max-w-[360px]">
+                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-rr-text-muted" />
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Search title, description, requester..."
+                        className="w-full h-8 pl-8 pr-3 rounded-md text-xs bg-rr-bg-secondary border border-rr-border text-rr-text placeholder-rr-text-muted focus:outline-none focus:border-rr-gold/50"
+                    />
+                </div>
+                <select
+                    value={sortBy}
+                    onChange={e => setSortBy(e.target.value as typeof sortBy)}
+                    className="h-8 px-2 rounded-md text-xs bg-rr-bg-secondary border border-rr-border text-rr-text focus:outline-none focus:border-rr-gold/50"
+                >
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="title-asc">Title A → Z</option>
+                    <option value="title-desc">Title Z → A</option>
+                    <option value="status">Status</option>
+                </select>
+                <span className="ml-auto text-[11px] text-rr-text-muted tabular-nums">
+                    {filteredRequests.length}{filteredRequests.length !== requests.length ? ` of ${requests.length}` : ''}
+                </span>
+            </div>
 
             {/* Request List */}
             {filteredRequests.length === 0 ? (
