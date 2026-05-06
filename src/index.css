@@ -88,25 +88,35 @@
 
 /* ============================================================
    Tailwind v4 — expose all token sets as utility classes
+   ------------------------------------------------------------
+   IMPORTANT: must use `@theme inline` so `bg-rr-*`/`text-rr-*`
+   utilities resolve to `var(--rr-*)` at runtime. With plain
+   `@theme {}` Tailwind would inline the hex values at build time,
+   so the `html[data-layout="beta"]` override below would have no
+   effect on utility classes — only on raw CSS-var consumers.
+   That broke Settings (dark form on light page), ForeSight, and
+   left Profile/FeatureRequests/UserManagement with washed-out
+   text in beta mode.
    ============================================================ */
-@theme {
-  /* Classic (V5) — bg-rr-*, text-rr-*, etc. */
-  --color-rr-bg-primary: #0a1218;
-  --color-rr-bg-secondary: #0f1923;
-  --color-rr-card: #131e29;
-  --color-rr-navy-50: #1a2533;
-  --color-rr-border: #2a3744;
-  --color-rr-text: #e8edf2;
-  --color-rr-text-dim: #98a4b0;
-  --color-rr-text-muted: #6b7884;
-  --color-rr-text-bright: #ffffff;
-  --color-rr-gold: #c5a44e;
-  --color-rr-gold-bright: #e0c170;
-  --color-rr-success: #3fb068;
-  --color-rr-warning: #d99e3a;
-  --color-rr-danger: #e35454;
-  --color-rr-danger-bg: #2a1518;
-  --color-rr-danger-border: #4a2226;
+@theme inline {
+  /* Classic (V5) — bg-rr-*, text-rr-*, etc. — driven by the live
+     `--rr-*` vars on :root (and overridden by [data-layout="beta"]). */
+  --color-rr-bg-primary: var(--rr-bg-primary);
+  --color-rr-bg-secondary: var(--rr-bg-secondary);
+  --color-rr-card: var(--rr-card);
+  --color-rr-navy-50: var(--rr-navy-50);
+  --color-rr-border: var(--rr-border);
+  --color-rr-text: var(--rr-text);
+  --color-rr-text-dim: var(--rr-text-dim);
+  --color-rr-text-muted: var(--rr-text-muted);
+  --color-rr-text-bright: var(--rr-text-bright);
+  --color-rr-gold: var(--rr-gold);
+  --color-rr-gold-bright: var(--rr-gold-bright);
+  --color-rr-success: var(--rr-success);
+  --color-rr-warning: var(--rr-warning);
+  --color-rr-danger: var(--rr-danger);
+  --color-rr-danger-bg: var(--rr-danger-bg);
+  --color-rr-danger-border: var(--rr-danger-border);
 }
 
 /* Beta tokens use Tailwind v4 @theme inline so the utility names
@@ -222,6 +232,18 @@ html[data-layout="beta"] {
   --rr-danger: #dc2626;
   --rr-danger-bg: #fee2e2;
   --rr-danger-border: #fecaca;
+}
+
+/* `.rr-card` — classic V5 card primitive used by ~10 components
+   (KPICard, DataTable, FeatureRequestAdmin, UserManagement, etc.).
+   It was referenced in markup but never defined as a CSS class, so
+   those cards rendered as raw text. Background/border come from the
+   `--rr-card`/`--rr-border` tokens, which the beta override remaps
+   to white/light-beige automatically. */
+@utility rr-card {
+  background: var(--rr-card);
+  border: 1px solid var(--rr-border);
+  border-radius: 0.5rem;
 }
 
 /* Beta-only utilities (label-tiny, hero gradients, tints) */
