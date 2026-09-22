@@ -6,27 +6,33 @@ export { normaliseRoomCode, DEFAULT_ROOM } from '@/lib/room';
 /**
  * Authoritative game state lives in one Postgres row per room (Neon).
  *
- * Throughput matters more than anything here: 100 phones tap within the same
- * second, and every tap is a read-modify-write of the same row. So:
+ * The hard part is that ~100 phones tap within the same second and every tap is a
+ * read-modify-write of the SAME row, spread over however many serverless instances
+ * the platform decides to run. So:
  *
- *  1. Mutations are queued per room inside this process and applied as ONE
- *     batch per database round-trip. A burst of 100 taps becomes ~1 write.
- *  2. Writes are optimistic — `UPDATE … WHERE version = $expected`. If another
- *     server instance won the race the batch is re-applied on the fresh row.
- *     No row lock is ever held across a network round-trip.
- *  3. Reads are served from a short-lived in-process cache so 100 polling
- *     phones don't turn into 100 SELECTs per second per instance.
+ *  1. Mutations queue per room inside each instance and commit as ONE batch, after a
+ *     short accumulation window. A burst that lands on one instance is one write.
+ *  2. A batch commits with a single-statement compare-and-swap: the UPDATE is
+ *     conditional on the version we read, and the same statement returns the current
+ *     row if we lost. One round trip per attempt, win or lose.
+ *  3. Lost races retry with randomised backoff. Without the jitter every instance
+ *     retries in lockstep and they collide repeatedly — that is a thundering herd,
+ *     and it burns all the attempts in milliseconds.
+ *  4. Reads are served from a brief in-process cache so 100 polling phones don't
+ *     become 100 SELECTs per second per instance.
  *
  * Without DATABASE_URL (local hacking) everything stays in process memory.
  */
 
 type Mutator = (state: GameState, now: number) => void;
 
+type CasResult = { ok: true } | { ok: false; current: GameState };
+
 interface Backend {
   read(code: string): Promise<GameState | null>;
   insert(state: GameState): Promise<void>;
-  /** Returns false if the row's version no longer matches `expectedVersion`. */
-  writeIfVersion(state: GameState, expectedVersion: number): Promise<boolean>;
+  /** Write `state` only if the stored version is still `expectedVersion`. */
+  compareAndSwap(state: GameState, expectedVersion: number): Promise<CasResult>;
 }
 
 // ---------------------------------------------------------------------------
@@ -76,13 +82,27 @@ class PgBackend implements Backend {
     ]);
   }
 
-  async writeIfVersion(state: GameState, expectedVersion: number): Promise<boolean> {
+  /**
+   * One round trip. The CTE does the conditional update; the outer SELECT reads the
+   * row as of statement start, so on a lost race we get a usable fresh base without
+   * a second query. `applied` is null exactly when the version no longer matched.
+   */
+  async compareAndSwap(state: GameState, expectedVersion: number): Promise<CasResult> {
     await this.ensureSchema();
-    const { rowCount } = await this.pool.query(
-      'UPDATE rooms SET state = $2, version = $3, updated_at = now() WHERE code = $1 AND version = $4',
+    const { rows } = await this.pool.query(
+      `WITH upd AS (
+         UPDATE rooms SET state = $2::jsonb, version = $3::bigint, updated_at = now()
+          WHERE code = $1 AND version = $4::bigint
+         RETURNING version
+       )
+       SELECT (SELECT version FROM upd) AS applied, r.state AS state
+         FROM rooms r WHERE r.code = $1`,
       [state.roomCode, JSON.stringify(state), state.version, expectedVersion],
     );
-    return (rowCount ?? 0) === 1;
+    const row = rows[0];
+    if (!row) throw new Error(`Room ${state.roomCode} vanished`);
+    if (row.applied !== null && row.applied !== undefined) return { ok: true };
+    return { ok: false, current: row.state as GameState };
   }
 }
 
@@ -95,11 +115,11 @@ class MemoryBackend implements Backend {
   async insert(state: GameState) {
     if (!this.rooms.has(state.roomCode)) this.rooms.set(state.roomCode, structuredClone(state));
   }
-  async writeIfVersion(state: GameState, expectedVersion: number) {
+  async compareAndSwap(state: GameState, expectedVersion: number): Promise<CasResult> {
     const cur = this.rooms.get(state.roomCode);
-    if (!cur || cur.version !== expectedVersion) return false;
+    if (cur && cur.version !== expectedVersion) return { ok: false, current: structuredClone(cur) };
     this.rooms.set(state.roomCode, structuredClone(state));
-    return true;
+    return { ok: true };
   }
 }
 
@@ -108,7 +128,13 @@ class MemoryBackend implements Backend {
 // ---------------------------------------------------------------------------
 
 const READ_CACHE_MS = 300;
-const MAX_RETRIES = 6;
+/** Wait this long to gather concurrent mutations into a single write. */
+const BATCH_WINDOW_MS = 40;
+const MAX_ATTEMPTS = 20;
+
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+/** Growing delay plus randomness, so competing instances stop colliding in lockstep. */
+const backoffMs = (attempt: number) => 12 * attempt + Math.floor(Math.random() * 45);
 
 interface Pending {
   mutate: Mutator;
@@ -155,6 +181,8 @@ class RoomWorker {
   private async drain() {
     this.draining = true;
     try {
+      // Let a burst pile up so it commits as one write instead of several.
+      await sleep(BATCH_WINDOW_MS);
       while (this.queue.length > 0) {
         const batch = this.queue.splice(0);
         try {
@@ -171,7 +199,9 @@ class RoomWorker {
 
   private async commitBatch(batch: Pending[]): Promise<GameState> {
     let base = this.cache ?? (await this.refresh());
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       const state = structuredClone(base);
       const now = Date.now();
       applyTimeout(state, now);
@@ -185,17 +215,30 @@ class RoomWorker {
       }
       if (state.version === base.version) state.version++;
 
-      if (await this.backend.writeIfVersion(state, base.version)) {
-        this.cache = state;
+      try {
+        const res = await this.backend.compareAndSwap(state, base.version);
+        if (res.ok) {
+          this.cache = state;
+          this.cachedAt = Date.now();
+          for (const [p, err] of failed) p.reject(err);
+          return state;
+        }
+        // Lost the race: the same round trip handed us a fresh base. Re-apply onto it.
+        base = res.current;
+        this.cache = base;
         this.cachedAt = Date.now();
-        for (const [p, err] of failed) p.reject(err);
-        return state;
+      } catch (err) {
+        lastError = err; // transient connection trouble — back off and try again
+        this.cache = null;
+        base = await this.refresh().catch(() => base);
       }
-      // Someone else (another instance) wrote first: reload and re-apply the batch.
-      this.cache = null;
-      base = await this.refresh();
+
+      await sleep(backoffMs(attempt));
     }
-    throw new Error(`Room ${this.code}: could not commit after ${MAX_RETRIES} attempts`);
+
+    throw new Error(
+      `Room ${this.code}: could not commit after ${MAX_ATTEMPTS} attempts${lastError ? ` (last error: ${String(lastError)})` : ''}`,
+    );
   }
 }
 

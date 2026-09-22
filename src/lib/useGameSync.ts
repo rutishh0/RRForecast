@@ -45,16 +45,24 @@ export function useGameSync(room: string, { intervalMs = 1000, hostKey }: Option
     }
   }, [room, accept]);
 
-  /** POST a host action or player message. Resolves with the server's reply. */
+  /**
+   * POST a host action or player message. Resolves with the server's reply.
+   * A 5xx is retried once after a short pause: under a burst the server can lose a
+   * write race, and nobody should lose their answer to that.
+   */
   const send = useCallback(
     async (body: Record<string, unknown>): Promise<SyncResponse> => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (hostKey) headers['x-host-key'] = hostKey;
-      const res = await fetch('/api/game/sync', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ room, ...body }),
-      });
+      const attempt = async () =>
+        fetch('/api/game/sync', { method: 'POST', headers, body: JSON.stringify({ room, ...body }) });
+
+      let res = await attempt();
+      if (res.status >= 500) {
+        await new Promise(r => setTimeout(r, 250 + Math.random() * 350));
+        res = await attempt();
+      }
+
       const data = (await res.json().catch(() => ({}))) as SyncResponse;
       if (!res.ok || data.error) {
         setLastError(data.error || `HTTP ${res.status}`);
