@@ -6,6 +6,10 @@ import { GameState, SyncResponse } from './types';
 interface Options {
   intervalMs?: number;
   hostKey?: string | null;
+  /** Ask the server for the trimmed per-player view instead of the whole room. */
+  view?: 'player' | 'host';
+  /** Required with view: 'player' — which player the view is for. */
+  playerId?: string | null;
 }
 
 /**
@@ -15,7 +19,7 @@ interface Options {
  *  - derives a smooth countdown from the server's clock, so the HUD ticks
  *    every second even though polls arrive less often than that
  */
-export function useGameSync(room: string, { intervalMs = 1000, hostKey }: Options = {}) {
+export function useGameSync(room: string, { intervalMs = 1000, hostKey, view = 'host', playerId }: Options = {}) {
   const [state, setState] = useState<GameState | null>(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [preRoll, setPreRoll] = useState(0);
@@ -37,13 +41,18 @@ export function useGameSync(room: string, { intervalMs = 1000, hostKey }: Option
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`/api/game/sync?room=${encodeURIComponent(room)}`, { cache: 'no-store' });
+      const q = new URLSearchParams({ room });
+      if (view === 'player') {
+        q.set('view', 'player');
+        if (playerId) q.set('pid', playerId);
+      }
+      const res = await fetch(`/api/game/sync?${q}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       accept((await res.json()) as SyncResponse);
     } catch {
       if (Date.now() - lastOkRef.current > 5000) setConnected(false);
     }
-  }, [room, accept]);
+  }, [room, view, playerId, accept]);
 
   /**
    * POST a host action or player message. Resolves with the server's reply.
@@ -55,7 +64,7 @@ export function useGameSync(room: string, { intervalMs = 1000, hostKey }: Option
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (hostKey) headers['x-host-key'] = hostKey;
       const attempt = async () =>
-        fetch('/api/game/sync', { method: 'POST', headers, body: JSON.stringify({ room, ...body }) });
+        fetch('/api/game/sync', { method: 'POST', headers, body: JSON.stringify({ room, view, ...body }) });
 
       let res = await attempt();
       if (res.status >= 500) {
@@ -73,7 +82,7 @@ export function useGameSync(room: string, { intervalMs = 1000, hostKey }: Option
       if (data.state) accept(data);
       return data;
     },
-    [room, hostKey, accept],
+    [room, view, hostKey, accept],
   );
 
   // Polling loop

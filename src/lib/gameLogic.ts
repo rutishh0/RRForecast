@@ -603,3 +603,64 @@ export function reduceClientMessage(state: GameState, msg: ClientMessage, now: n
       return { error: 'Unknown message.' };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Player projection
+//
+// The full room state grows with headcount: at 150 players a mid-game state is
+// ~170KB, and sending that to every phone every second is both wasteful (parse
+// cost and battery on a mid-range phone, stutter on weak 4G) and leaky — it
+// contains everyone's answers and every punchline's author before the reveal.
+//
+// A phone only needs its own row, the thing currently on screen, and a couple of
+// aggregates. This keeps the GameState shape so nothing downstream has to change.
+// ---------------------------------------------------------------------------
+
+export function projectForPlayer(state: GameState, playerId: string | null): GameState {
+  const me = playerId ? state.players[playerId] : undefined;
+  const players: Record<string, Player> = me ? { [me.id]: me } : {};
+  const rank = me ? rankOf(me, state.players) : undefined;
+
+  const quiplashPrompts = state.quiplashPrompts.map((p, i): QuiplashPrompt => {
+    const bare = { id: p.id, prompt: p.prompt, submissions: [] as QuiplashSubmission[] };
+    if (state.gameMode !== 'QUIPLASH' || i !== state.currentQuestionIndex || !me) return bare;
+
+    if (state.subPhase === 'SUBMIT') {
+      // Just this player's own punchline, so the phone can show it back and allow an edit.
+      return { ...bare, submissions: p.submissions.filter(s => s.playerId === me.id) };
+    }
+
+    if (state.subPhase === 'VOTING') {
+      // This phone's ballot only, stripped of authorship: names are the reveal's payoff,
+      // and anything sent to the client is readable by the client.
+      const submissions = getBallot(p, me.id).map(s => ({
+        id: s.id,
+        playerId: '',
+        playerName: '',
+        avatar: '',
+        text: s.text,
+        votes: s.votes.includes(me.id) ? [me.id] : [],
+      }));
+      return { ...bare, submissions };
+    }
+
+    return bare; // REVEAL: the phone shows its own scorecard; the big screen has the authors.
+  });
+
+  const flagScenarios = state.flagScenarios.map((s, i) => ({
+    id: s.id,
+    statement: s.statement,
+    context: s.context,
+    voters: me && i === state.currentFlagIndex && s.voters[me.id] ? { [me.id]: s.voters[me.id] } : {},
+  }));
+
+  return {
+    ...state,
+    players,
+    quiplashPrompts,
+    flagScenarios,
+    playerCount: Object.keys(state.players).length,
+    myRank: rank?.rank,
+    myTied: rank?.tied,
+  };
+}

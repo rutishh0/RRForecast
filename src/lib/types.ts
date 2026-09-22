@@ -70,6 +70,13 @@ export interface GameState {
   currentFlagIndex: number;
   sessionStartTime: number;
   version: number;
+
+  // --- present only on the trimmed player view (see projectForPlayer) -------
+  /** Total headcount, because `players` is trimmed to just you. */
+  playerCount?: number;
+  /** Your competition rank, computed server-side for the same reason. */
+  myRank?: number;
+  myTied?: boolean;
 }
 
 export type ClientMessage =
