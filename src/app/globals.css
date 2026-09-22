@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #06090e;        /* Deep Stratosphere Black */
+  --bg-secondary: #0d1522;      /* Avionics Chassis Blue */
+  --bg-card: #131f33;           /* Titanium Panel */
+  --border-subtle: #1e314f;     /* Structural Seam */
+  --accent-cyan: #00e5ff;       /* Turbine Bleed Air Cyan */
+  --accent-blue: #0066ff;       /* Rolls-Royce Heritage Navy */
+  --accent-amber: #ff9100;      /* Warning Telemetry Amber */
+  --accent-emerald: #00e676;    /* Engine Parameter Green */
+  --accent-rose: #ff1744;       /* Critical Warning Red */
+  --text-main: #f0f4f8;         /* High-Vis White */
+  --text-muted: #829ab1;        /* Radar Trace Slate */
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-x: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Monospace telemetry numbers */
+.font-telemetry {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+}
+
+/* Aerospace subtle radar grid background */
+.aerospace-grid-bg {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(30, 49, 79, 0.2) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 49, 79, 0.2) 1px, transparent 1px);
+}
+
+/* Tactical scanline glow */
+.glow-cyan {
+  box-shadow: 0 0 25px -3px rgba(0, 229, 255, 0.35);
+}
+
+.glow-amber {
+  box-shadow: 0 0 25px -3px rgba(255, 145, 0, 0.4);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 25px -3px rgba(0, 230, 118, 0.4);
+}
+
+.glow-rose {
+  box-shadow: 0 0 25px -3px rgba(255, 23, 68, 0.45);
+}
+
+/* Pulse animation for live indicators */
+@keyframes radarPulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.animate-radar {
+  animation: radarPulse 2s infinite ease-in-out;
+}
+
+/* Used all over the UI for reveals */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-fade-in {
+  animation: fadeIn 0.35s ease-out both;
+}
+
+/* Phones: stop double-tap zoom on the big buttons */
+button {
+  touch-action: manipulation;
+}

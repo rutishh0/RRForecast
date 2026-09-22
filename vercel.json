@@ -1,17 +1,7 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["lhr1"],
   "functions": {
-    "api/engine-data/[[...action]].ts": { "maxDuration": 30 },
-    "api/auth/[...action].ts": { "maxDuration": 10 },
-    "api/chat/[[...action]].ts": { "maxDuration": 60 }
-  },
-  "rewrites": [
-    { "source": "/api/engine-data", "destination": "/api/engine-data/_root" },
-    { "source": "/api/dashboard", "destination": "/api/dashboard/_root" },
-    { "source": "/api/messages", "destination": "/api/messages/_root" },
-    { "source": "/api/postits", "destination": "/api/postits/_root" },
-    { "source": "/api/feature-requests", "destination": "/api/feature-requests/_root" },
-    { "source": "/api/users", "destination": "/api/users/_root" },
-    { "source": "/api/chat", "destination": "/api/chat/_root" },
-    { "source": "/((?!api/).*)", "destination": "/" }
-  ]
+    "src/app/api/game/sync/route.ts": { "maxDuration": 10 }
+  }
 }
