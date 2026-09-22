@@ -58,10 +58,15 @@ All points are awarded at the moment of the reveal, so phones never leak whether
 2. Set `DATABASE_URL` (and optionally `HOST_KEY`) in the Vercel project's environment variables.
 3. Deploy. The QR code on the host screen automatically uses the deployed origin.
 
+## Status
+
+`STATUS.md` has the current picture: what is live, the findings from the four-person rehearsal, and the prioritised fix list.
+
 ## Testing
 
 ```bash
 npm run build                          # type-check + production build
-node scripts/simulate.mjs 100          # 100 bots play a full game against a running server and assert every rule
+node scripts/simulate.mjs 100          # bots play a full game against a running server and assert every rule
+node scripts/loadtest.mjs 150          # event scale: 150 players acting at once, plus payload-size checks
 node scripts/db-init.mjs               # create the rooms table (also done automatically on first request)
 ```

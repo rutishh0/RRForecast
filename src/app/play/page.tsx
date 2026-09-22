@@ -24,7 +24,6 @@ function storageKey(room: string) {
 function PlayerController() {
   const params = useSearchParams();
   const room = normaliseRoomCode(params.get('room'));
-  const { state, timerSeconds, preRoll, connected, lastError, send, serverNow } = useGameSync(room, { intervalMs: 1000 });
 
   // Identity for this room is kept in localStorage so a refresh or phone lock doesn't lose your score.
   const [playerId, setPlayerId] = useState<string | null>(() => {
@@ -33,6 +32,14 @@ function PlayerController() {
     } catch {
       return null;
     }
+  });
+
+  // 'player' view: the server sends only this phone's slice of the room, which keeps the
+  // payload flat regardless of headcount and keeps other people's answers off this device.
+  const { state, timerSeconds, preRoll, connected, lastError, send, serverNow } = useGameSync(room, {
+    intervalMs: 1000,
+    view: 'player',
+    playerId,
   });
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -119,7 +126,7 @@ function PlayerController() {
               <div className="p-4 bg-[#131f33] border border-[#00e676]/40 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold text-[#00e676]">
                 <CheckCircle2 className="w-4 h-4" />
                 <span>
-                  {Object.keys(state.players).length} in room {state.roomCode}
+                  {state.playerCount ?? 1} in room {state.roomCode}
                 </span>
               </div>
               <p className="text-xs text-[#829ab1] leading-relaxed">
@@ -153,7 +160,7 @@ function PlayerController() {
         return (
           <PlayerScorecard
             player={me}
-            allPlayers={state.players}
+            state={state}
             showLastRound
             showStreak
             answerText={correct ? `${String.fromCharCode(65 + q.options.indexOf(correct))} — ${correct.text}` : undefined}
@@ -194,7 +201,7 @@ function PlayerController() {
             />
           );
         }
-        return <PlayerScorecard player={me} allPlayers={state.players} showLastRound subline="Authors revealed on the big screen." />;
+        return <PlayerScorecard player={me} state={state} showLastRound subline="Authors revealed on the big screen." />;
       }
 
       case 'FLAGS': {
@@ -213,11 +220,11 @@ function PlayerController() {
             />
           );
         }
-        return <PlayerScorecard player={me} allPlayers={state.players} showLastRound subline="See how the room voted on the big screen." />;
+        return <PlayerScorecard player={me} state={state} showLastRound subline="See how the room voted on the big screen." />;
       }
 
       case 'PODIUM':
-        return <PlayerScorecard player={me} allPlayers={state.players} headline="Final standings" subline="Thanks for playing." />;
+        return <PlayerScorecard player={me} state={state} headline="Final standings" subline="Thanks for playing." />;
     }
   };
 

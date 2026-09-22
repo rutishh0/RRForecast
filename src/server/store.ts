@@ -145,6 +145,7 @@ interface Pending {
 class RoomWorker {
   private cache: GameState | null = null;
   private cachedAt = 0;
+  private inflight: Promise<GameState> | null = null;
   private queue: Pending[] = [];
   private draining = false;
 
@@ -159,7 +160,20 @@ class RoomWorker {
     return this.refresh();
   }
 
-  private async refresh(): Promise<GameState> {
+  /**
+   * Single-flight: when the cache expires, every in-progress poll lands here at once.
+   * Without sharing one promise, 150 phones become 150 identical queries fighting over
+   * the connection pool, and read latency collapses under its own weight.
+   */
+  private refresh(): Promise<GameState> {
+    if (this.inflight) return this.inflight;
+    this.inflight = this.loadFresh().finally(() => {
+      this.inflight = null;
+    });
+    return this.inflight;
+  }
+
+  private async loadFresh(): Promise<GameState> {
     let state = await this.backend.read(this.code);
     if (!state) {
       state = createInitialGameState(this.code);

@@ -1,12 +1,13 @@
 import React from 'react';
-import { Player } from '@/lib/types';
-import { getRankedPlayers, rankOf } from '@/lib/gameLogic';
+import { GameState, Player } from '@/lib/types';
+import { rankOf } from '@/lib/gameLogic';
 import { avatarIcon } from '@/lib/content';
 import { Flame, CheckCircle2, XCircle, MinusCircle } from 'lucide-react';
 
 interface PlayerScorecardProps {
   player: Player;
-  allPlayers: Record<string, Player>;
+  /** Rank and headcount come from the server, since the phone only holds its own row. */
+  state: GameState;
   /** Show the "+750 — correct!" card for the round that just ended. */
   showLastRound?: boolean;
   headline?: string;
@@ -19,15 +20,17 @@ interface PlayerScorecardProps {
 
 export const PlayerScorecard: React.FC<PlayerScorecardProps> = ({
   player,
-  allPlayers,
+  state,
   showLastRound = false,
   headline,
   subline = 'Eyes on the big screen.',
   showStreak = false,
   answerText,
 }) => {
-  const ranked = getRankedPlayers(allPlayers);
-  const { rank, tied } = rankOf(player, allPlayers);
+  const fallback = rankOf(player, state.players);
+  const rank = state.myRank ?? fallback.rank;
+  const tied = state.myTied ?? fallback.tied;
+  const total = state.playerCount ?? Object.keys(state.players).length;
   const lr = player.lastRound;
 
   const tone = !lr ? '' : lr.points > 0 && lr.correct !== false ? 'good' : lr.points > 0 ? 'ok' : 'bad';
@@ -77,7 +80,7 @@ export const PlayerScorecard: React.FC<PlayerScorecardProps> = ({
           <div className="bg-[#131f33] border border-[#1e314f] p-4 rounded-2xl">
             <div className="text-[10px] text-[#829ab1] uppercase font-bold">Rank</div>
             <div className="font-telemetry font-black text-3xl text-[#00e5ff] mt-1">{tied ? '=' : '#'}{rank}</div>
-            <div className="text-[9px] text-[#829ab1]">of {ranked.length}</div>
+            <div className="text-[9px] text-[#829ab1]">of {total}</div>
           </div>
           <div className="bg-[#131f33] border border-[#1e314f] p-4 rounded-2xl">
             <div className="text-[10px] text-[#829ab1] uppercase font-bold">Points</div>

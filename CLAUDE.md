@@ -1,6 +1,9 @@
 # Half Hands Live — working notes
 
-See `README.md` for what this is, how to run it, scoring, and deployment. This file is for whoever (human or AI) edits the code next.
+See `README.md` for what this is, how to run it, scoring, and deployment.
+**See `STATUS.md` for the current state: what is deployed, what is broken, and the prioritised next steps.** Start there.
+
+This file is the rules of the codebase, for whoever (human or AI) edits it next.
 
 ## Layout
 
@@ -14,7 +17,9 @@ src/server/store.ts     Persistence: Neon Postgres (or in-memory fallback), per-
 src/app/api/game/sync   The only endpoint. GET reads (and applies timer expiry); POST applies host actions / player messages.
 src/app/host/page.tsx   Host screen. src/components/host/*
 src/app/play/page.tsx   Phone controller. src/components/player/*
-scripts/simulate.mjs    100-bot end-to-end assertion run. Run it after any change to gameLogic or store.
+scripts/simulate.mjs    Bot end-to-end assertion run. Run after ANY change to gameLogic or store.
+scripts/loadtest.mjs    Event-scale test (150 players acting simultaneously) + payload-size assertions.
+scripts/db-init.mjs     Creates the rooms table (also happens automatically on first request).
 ```
 
 ## Rules of the road
@@ -25,7 +30,11 @@ scripts/simulate.mjs    100-bot end-to-end assertion run. Run it after any chang
 - **Do not read `state.timerSeconds` on the server** — it is derived on the way out (`withDerived`). Use `roundStartTime` + `timerTotal`.
 - **Keep reducers re-runnable.** `store.ts` may apply a batch of mutators more than once on optimistic-write conflict.
 - Player components that hold tap state must be mounted with a `key` tied to the question/prompt/scenario id (see `play/page.tsx`), so state never leaks between rounds.
-- Content: wrong options must be *plausible misreadings*, short enough for a phone, and the Gen-Z line should use one or two slang terms, correctly. No name-dropping of people who aren't on the agenda.
+- Content: wrong options must be *plausible misreadings*, short enough for a phone, and the Gen-Z line should use one or two slang terms, correctly. No name-dropping of people who aren't on the agenda. Keep it **decode-only** — never ask anyone to produce slang; that is what makes the game fun rather than humiliating for half the room.
+- **Never name a live product in a joke** (the Trent 1000 durability question was pulled for this): the site has no login, carries RR branding, and a screenshot travels.
+- The player payload must stay flat as headcount grows. Anything added to `GameState` is sent to 150 phones every second unless `projectForPlayer` trims it — and anything sent to a phone is readable by that phone, so it must not contain other people's answers or unrevealed authorship.
+- Player-facing inputs must be **uncontrolled** (`defaultValue` + ref). A controlled input inside a component that re-renders every second from polling loses and duplicates characters as the user types.
+- A phone that refreshes, locks or loses signal must come back as the **same player**. Minting a new record orphans their score and makes the leaderboard lie.
 
 ## Verify before claiming anything works
 

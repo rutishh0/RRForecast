@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mutateRoom, normaliseRoomCode, readRoom } from '@/server/store';
-import { reduceClientMessage, reduceHostAction } from '@/lib/gameLogic';
+import { projectForPlayer, reduceClientMessage, reduceHostAction } from '@/lib/gameLogic';
 import { ClientMessage, HostAction } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -17,8 +17,12 @@ const NO_STORE = { 'Cache-Control': 'no-store' };
 
 export async function GET(req: NextRequest) {
   const room = normaliseRoomCode(req.nextUrl.searchParams.get('room'));
+  // Phones ask for the trimmed view; the host screen needs the whole room.
+  const asPlayer = req.nextUrl.searchParams.get('view') === 'player';
+  const pid = req.nextUrl.searchParams.get('pid');
   try {
-    const state = await readRoom(room);
+    const full = await readRoom(room);
+    const state = asPlayer ? projectForPlayer(full, pid) : full;
     return NextResponse.json({ state, serverTime: Date.now() }, { headers: NO_STORE });
   } catch (err) {
     console.error('GET /api/game/sync failed:', err);
@@ -58,9 +62,11 @@ export async function POST(req: NextRequest) {
     }
     const msg = body as unknown as ClientMessage;
     let result: { playerId?: string; error?: string } = {};
-    const state = await mutateRoom(room, (s, now) => {
+    const full = await mutateRoom(room, (s, now) => {
       result = reduceClientMessage(s, msg, now);
     });
+    const pid = result.playerId ?? (typeof body.playerId === 'string' ? body.playerId : null);
+    const state = body.view === 'player' ? projectForPlayer(full, pid) : full;
     return NextResponse.json({ state, serverTime: Date.now(), ...result }, { headers: NO_STORE });
   } catch (err) {
     console.error('POST /api/game/sync failed:', err);
