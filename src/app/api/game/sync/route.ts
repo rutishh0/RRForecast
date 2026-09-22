@@ -5,6 +5,7 @@ import { ClientMessage, HostAction } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+export const maxDuration = 10;
 
 const NO_STORE = { 'Cache-Control': 'no-store' };
 
