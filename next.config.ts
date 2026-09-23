@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   output: process.env.BUILD_STANDALONE ? 'standalone' : undefined,
   // The repo sits under a home directory that has its own package-lock.json;
   // pin the workspace root so Turbopack does not go looking upwards.
+  // Inline the stylesheet into the document instead of linking it. Vercel serves
+  // static files with `Content-Disposition: inline; filename="....css"`, which the
+  // Rolls-Royce web proxy reads as a file download and blocks, leaving the page
+  // unstyled. Inlining removes that request entirely. Recommended for Tailwind.
+  experimental: { inlineCss: true },
   turbopack: { root: process.cwd() },
   devIndicators: false,
 };

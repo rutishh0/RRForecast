@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { TurbineLogo } from '@/components/ui/TurbineLogo';
 import { DEFAULT_ROOM, normaliseRoomCode } from '@/lib/room';
+import { SystemPanel } from '@/components/landing/SystemPanel';
 import { Tv, Smartphone, ExternalLink, Zap } from 'lucide-react';
 
 export default function HomeClient() {
@@ -17,7 +18,7 @@ export default function HomeClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#06090e] text-[#f0f4f8] flex flex-col justify-between aerospace-grid-bg font-mono select-none relative p-6">
+    <div className="min-h-screen bg-[#06090e] text-[#f0f4f8] flex flex-col gap-10 aerospace-grid-bg font-mono select-none relative p-6">
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#00e5ff]/5 rounded-full blur-3xl pointer-events-none" />
 
       <header className="flex items-center justify-between max-w-6xl mx-auto w-full border-b border-[#1e314f] pb-4">
@@ -30,7 +31,9 @@ export default function HomeClient() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto w-full my-auto text-center space-y-8 relative z-10 py-8">
+      <SystemPanel room={room} />
+
+      <main className="max-w-4xl mx-auto w-full mt-12 text-center space-y-8 relative z-10 py-8">
         <div className="space-y-3">
           <div className="inline-flex items-center gap-2 bg-[#0d1522] border border-[#00e5ff]/40 px-4 py-1.5 rounded-full text-xs font-black text-[#00e5ff] tracking-widest uppercase">
             <Zap className="w-3.5 h-3.5 text-[#ff9100]" />
